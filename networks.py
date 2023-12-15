@@ -167,9 +167,9 @@ class NatureIQN(nn.Module):
         assert cos.shape == (batch_size,n_tau,self.n_cos), "cos shape is incorrect"
         return cos, taus
 
-    def save_checkpoint(self):
+    def save_checkpoint(self, name):
         #print('... saving checkpoint ...')
-        torch.save(self.state_dict(), "current_model" + str(int(time.time() - self.start)))
+        torch.save(self.state_dict(), name)
 
     def load_checkpoint(self):
         #print('... loading checkpoint ...')
@@ -627,12 +627,12 @@ class ImpalaCNNLargeIQN(nn.Module):
         self.cos_embedding = nn.Linear(self.n_cos, self.conv_out_size)
 
         if not self.noisy:
-            self.fc1 = nn.Linear(self.conv_out_size, 256)
-            self.fc2 = nn.Linear(256, self.actions)
+            self.fc1 = nn.Linear(self.conv_out_size, self.linear_size)
+            self.fc2 = nn.Linear(self.linear_size, self.actions)
 
         else:
-            self.fc1 = NoisyLinear(self.conv_out_size, 256)
-            self.fc2 = NoisyLinear(256, self.actions)
+            self.fc1 = NoisyLinear(self.conv_out_size, self.linear_size)
+            self.fc2 = NoisyLinear(self.linear_size, self.actions)
 
 
         self.to(device)
@@ -655,6 +655,8 @@ class ImpalaCNNLargeIQN(nn.Module):
         taus [shape of ((batch_size, num_tau, 1))]
 
         """
+        print(input)
+        print(input.shape)
         input = input.float() / 256
         batch_size = input.size()[0]
 

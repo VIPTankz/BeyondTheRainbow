@@ -8,14 +8,11 @@ import torch.optim as optim
 from memory import ReplayMemory
 import numpy as np
 from collections import deque
-import kornia.augmentation as aug
-import kornia
 import pickle
 import matplotlib.pyplot as plt
 #from torchsummary import summary
 import math
 from networks import ImpalaCNNLarge, ImpalaCNNLargeIQN, NatureIQN
-from OutputViewer import OutputViewer
 
 class EpsilonGreedy():
     def __init__(self, eps_start, eps_steps, eps_final, sticky, instances, action_space):
@@ -51,11 +48,12 @@ class EpsilonGreedy():
                 return np.random.choice(self.action_space)
 
 class Agent():
-    def __init__(self, n_actions, input_dims, device, num_envs):
+    def __init__(self, n_actions, input_dims, device, num_envs, agent_name):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
         self.device = device
+        self.agent_name = agent_name
 
         self.action_space = [i for i in range(self.n_actions)]
         self.learn_step_counter = 0
@@ -64,7 +62,7 @@ class Agent():
 
         # IMPORTANT params, check these
         self.lr = 5e-5 #5e-5  # 0.0001 for sample efficient version
-        self.min_sampling_size = 80000
+        self.min_sampling_size = 40000
         self.n = 3
         self.gamma = 0.99
         self.batch_size = 32
@@ -95,10 +93,10 @@ class Agent():
 
         self.max_mem_size = 2000000
 
-        self.loading_checkpoint = True
-        self.viewing_output = True
+        self.loading_checkpoint = False
+        self.viewing_output = False
 
-        self.total_frames = 2000000  # This needs to be divided by replay_period
+        self.total_frames = 1000000  # This needs to be divided by replay_period
         if not self.loading_checkpoint:
             self.per_beta = 0.4
 
@@ -126,7 +124,7 @@ class Agent():
 
         if not self.noisy:
             if not self.loading_checkpoint:
-                self.eps_start = 1.0
+                self.eps_start = 0.999
                 self.eps_steps = 250000
                 self.sticky = False
                 self.eps_final = 0.01
@@ -207,7 +205,8 @@ class Agent():
             state = T.tensor(np.array([observation]), dtype=T.float).to(self.net.device)
 
             qvals = self.net.qvals(state)
-            self.viewer.update(qvals[0].cpu().detach().tolist())
+            if self.viewing_output:
+                self.viewer.update(qvals[0].cpu().detach().tolist())
             x = T.argmax(qvals).item()
             return x
 
@@ -223,8 +222,7 @@ class Agent():
         self.tgt_net.load_state_dict(self.net.state_dict())
 
     def save_models(self):
-        self.net.save_checkpoint()
-        self.tgt_net.save_checkpoint()
+        self.net.save_checkpoint(self.agent_name)
 
     def load_models(self):
         self.net.load_checkpoint()

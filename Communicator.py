@@ -7,7 +7,6 @@ from Agent import Agent
 from collections import deque
 from copy import deepcopy
 import subprocess
-from PIL import Image
 import torch
 class Communicator:
     def __init__(self, envs, agent, batch_frames, run_name):
@@ -54,9 +53,9 @@ class Communicator:
             f.write(str(pid))
 
         time.sleep(0.1)
-        print("Launching Dolphin")
+        print("Launching... ")
         self.launch(pid)
-        print("Dolphin Launched Successfully")
+        print("Launched Successfully")
 
         addressListener = ('localhost', 26330 + pid)
         listener = Listener(addressListener, authkey=b'secret password')
@@ -78,21 +77,18 @@ class Communicator:
         
 
     def launch(self, pid):
-        gamename = "Galaxy"
-        gamefile = 'Super Mario Galaxy (Europe) (En,Fr,De,Es,It).nkit.gcz"'
-
-        cmd1 = 'cmd /c C:\\Users\\Tyler\\Documents\\RL3\\rl3' + gamename + '\\dolphin'
-        cmd2 = '\\Binary\\x64\\Dolphin.exe --no-python-subinterpreters --script C:/Users/Tyler/Documents/RL3/rl3' \
-               + gamename + '/DolphinScript.py \\b\
-         --exec="C:\\Users\\Tyler\\Documents\\RL3\\GameCollection\\'
 
         # launch dolphin
-        print(cmd1 + str(pid) + cmd2 + gamefile)
-        os.popen(cmd1 + str(pid) + cmd2 + gamefile)
+        string = "python DolphinScript.py"
+        os.popen(string)
 
         time.sleep(1)
 
-        with open('C:/Users/Tyler/Documents/RL3/rl3' + gamename + '/script_pid' + str(pid) + '.txt') as f:
+        if not os.path.isfile('script_pid' + str(pid) + '.txt'):
+            with open('script_pid' + str(pid) + '.txt', 'w') as f:
+                f.write('0')
+
+        with open('script_pid' + str(pid) + '.txt') as f:
             self.script_pids[pid] = int(f.readlines()[0])
 
         time.sleep(0.5)
@@ -242,23 +238,39 @@ def on_release(key):
     global action
     action = 0
 
+
+def make_env(game, eval=False):
+    env = gymnasium.make('ALE/' + game + '-v5', frameskip=1)
+
+    env = gymnasium.wrappers.AtariPreprocessing(env)
+    env = gymnasium.wrappers.FrameStack(env, 4)
+
+    return env
+
 if __name__ == "__main__":
+
+    game = "BattleZone"
+    agent_name = "RainbowImpala2SpectralMaxPoolMunchausenIqnNoNoisy_" + game
+
+    env = make_env(game)
+
+    with open('game.txt', 'w') as f:
+        f.write(game)
+
     device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-    envs = 1
-    num_actions = 6
-    replay_period = 8
-    SAVE_INTERVAL = 160000
+    envs = 4
+    replay_period = 4
+    SAVE_INTERVAL = 1000000
 
     action = 0
 
     mode = "ai"
 
     if mode == "ai":
-        agent = Agent(num_actions, [4, 140, 75], device=device, num_envs=envs)
+        agent = Agent(env.action_space.n, [4, 84, 84], device=device, num_envs=envs, agent_name=agent_name)
 
-        com = Communicator(envs=envs, agent=agent, batch_frames=replay_period, run_name="MultipleTracks" + str(np.random.randint(0,111)))
+        com = Communicator(envs=envs, agent=agent, batch_frames=replay_period, run_name=agent_name)
     else:
-        from pynput import keyboard
         listener = keyboard.Listener(
             on_press=on_press,
             on_release=on_release)
