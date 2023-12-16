@@ -135,7 +135,7 @@ class Communicator:
                     np.save(self.run_name, self.total_rewards)
 
                 if self.total_env_frames % SAVE_INTERVAL == 0:
-                    self.agent.net.save_checkpoint()
+                    self.agent.save_model()
 
                 transition = self.transitions.pop()
 
@@ -249,8 +249,10 @@ def make_env(game, eval=False):
 
 if __name__ == "__main__":
 
-    game = "BattleZone"
-    agent_name = "RainbowImpala2SpectralMaxPoolMunchausenIqnNoNoisy_" + game
+    game = "NameThisGame"
+    agent_name = "RainbowImpala2SpectralMaxPoolMunchausenIqnNoNoisyBs16_" + game
+
+    #target replace is every 8000 grad / 32000 env steps
 
     env = make_env(game)
 

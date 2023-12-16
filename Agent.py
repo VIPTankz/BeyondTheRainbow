@@ -62,10 +62,10 @@ class Agent():
 
         # IMPORTANT params, check these
         self.lr = 5e-5 #5e-5  # 0.0001 for sample efficient version
-        self.min_sampling_size = 40000
+        self.min_sampling_size = 80000
         self.n = 3
         self.gamma = 0.99
-        self.batch_size = 32
+        self.batch_size = 16
 
         self.replay_ratio = 1
         self.model_size = 2  # Scaling of IMPALA network
@@ -91,12 +91,12 @@ class Agent():
             self.lo = -1
             self.alpha = 0.9
 
-        self.max_mem_size = 2000000
+        self.max_mem_size = 1000000
 
         self.loading_checkpoint = False
         self.viewing_output = False
 
-        self.total_frames = 1000000  # This needs to be divided by replay_period
+        self.total_frames = 50000000  # This needs to be divided by replay_period
         if not self.loading_checkpoint:
             self.per_beta = 0.4
 
@@ -107,7 +107,7 @@ class Agent():
         if self.soft_updates:
             self.soft_update_tau = 0.005 #0.001 for non-sample-eff
         else:
-            self.replace_target_cnt = 4000  # 32k - # This also needs to be divided by replay_period
+            self.replace_target_cnt = 8000  # 32k - # This also needs to be divided by replay_period
 
         if self.iqn:
             self.num_tau = 8
@@ -124,8 +124,8 @@ class Agent():
 
         if not self.noisy:
             if not self.loading_checkpoint:
-                self.eps_start = 0.999
-                self.eps_steps = 250000
+                self.eps_start = 1.0
+                self.eps_steps = 125000
                 self.sticky = False
                 self.eps_final = 0.01
             else:
@@ -221,8 +221,8 @@ class Agent():
     def replace_target_network(self):
         self.tgt_net.load_state_dict(self.net.state_dict())
 
-    def save_models(self):
-        self.net.save_checkpoint(self.agent_name)
+    def save_model(self):
+        self.net.save_checkpoint(self.agent_name + str(self.env_steps))
 
     def load_models(self):
         self.net.load_checkpoint()

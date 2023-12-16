@@ -655,8 +655,6 @@ class ImpalaCNNLargeIQN(nn.Module):
         taus [shape of ((batch_size, num_tau, 1))]
 
         """
-        print(input)
-        print(input.shape)
         input = input.float() / 256
         batch_size = input.size()[0]
 
@@ -693,9 +691,9 @@ class ImpalaCNNLargeIQN(nn.Module):
         assert cos.shape == (batch_size,n_tau,self.n_cos), "cos shape is incorrect"
         return cos, taus
 
-    def save_checkpoint(self):
+    def save_checkpoint(self, name):
         #print('... saving checkpoint ...')
-        torch.save(self.state_dict(), "current_model" + str(int(time.time() - self.start)))
+        torch.save(self.state_dict(), name + ".model")
 
     def load_checkpoint(self):
         #print('... loading checkpoint ...')
