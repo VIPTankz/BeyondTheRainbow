@@ -113,7 +113,7 @@ if __name__ == '__main__':
             print(env.observation_space)
             print(env.action_space)
 
-            agent = Agent(n_actions=env.action_space.n, input_dims=[4, 84, 84], total_frames=100000, device=device,
+            agent = Agent(n_actions=env.action_space.n, input_dims=[4, 84, 84], total_frames=10000000, device=device,
                           game=game, run=runs, name=agent_name)
 
             scores = []
