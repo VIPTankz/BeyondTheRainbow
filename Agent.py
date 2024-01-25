@@ -46,7 +46,7 @@ class Agent():
 
         # IMPORTANT params, check these
         self.lr = 5e-5 #5e-5  # 0.0001 for sample efficient version
-        self.min_sampling_size = 1000
+        self.min_sampling_size = 2000
         self.n = 3
         self.gamma = 0.99
         self.batch_size = 16
@@ -186,6 +186,11 @@ class Agent():
                     action = self.epsilon.choose_action()
                     if action is not None:
                         x[i] = action
+            elif self.eval_mode:
+                for i in range(len(observation)):
+                    if np.random.random() > 0.01:
+                        x[i] = np.random.choice(self.action_space)
+
 
             return x
 
@@ -247,21 +252,27 @@ class Agent():
             self.soft_update()
 
         try:
-            mems = np.random.choice(self.num_envs, self.per_splits, replace=False)
+            if self.num_envs > 1:
+                mems = np.random.choice(self.num_envs, self.per_splits, replace=False)
 
-            idxs, states, actions, rewards, next_states, dones, weights = self.memories[mems[0]].sample(
-                self.batch_size // self.per_splits)
+                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mems[0]].sample(
+                    self.batch_size // self.per_splits)
 
-            idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[mems[1]].sample(
-                self.batch_size // self.per_splits)
+                idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[mems[1]].sample(
+                    self.batch_size // self.per_splits)
 
-            idxs = np.concatenate((idxs, idxsN))
-            states = torch.cat((states, statesN))
-            actions = torch.cat((actions, actionsN))
-            rewards = torch.cat((rewards, rewardsN))
-            next_states = torch.cat((next_states, next_statesN))
-            dones = torch.cat((dones, donesN))
-            weights = torch.cat((weights, weightsN))
+                idxs = np.concatenate((idxs, idxsN))
+                states = torch.cat((states, statesN))
+                actions = torch.cat((actions, actionsN))
+                rewards = torch.cat((rewards, rewardsN))
+                next_states = torch.cat((next_states, next_statesN))
+                dones = torch.cat((dones, donesN))
+                weights = torch.cat((weights, weightsN))
+
+            else:
+                idxs, states, actions, rewards, next_states, dones, weights = self.memories[0].sample(
+                    self.batch_size)
+
         except Exception as e:
             tb = traceback.format_exc()
             print(tb)
@@ -429,10 +440,13 @@ class Agent():
         if self.grad_steps % 10000 == 0:
             print("Completed " + str(self.grad_steps) + " gradient steps")
 
-        idxs = np.split(idxs, self.per_splits)
-        loss_v = torch.split(loss_v, self.batch_size // self.per_splits)
-        for i in range(self.per_splits):
-            self.memories[mems[i]].update_priorities(idxs[i], loss_v[i].cpu().detach().numpy())
+        if self.num_envs > 1:
+            idxs = np.split(idxs, self.per_splits)
+            loss_v = torch.split(loss_v, self.batch_size // self.per_splits)
+            for i in range(self.per_splits):
+                self.memories[mems[i]].update_priorities(idxs[i], loss_v[i].cpu().detach().numpy())
+        else:
+            self.memories[0].update_priorities(idxs, loss_v.cpu().detach().numpy())
 
 
 def calculate_huber_loss(td_errors, k=1.0):
