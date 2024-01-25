@@ -1,153 +1,81 @@
-import gym
+
 import numpy as np
-from gym.wrappers import AtariPreprocessing
 import time
 from copy import deepcopy
 import sys
-import torch as T
-from AtariSetup import AtariPreprocessing, TimeLimit, FrameStack, ImageToPyTorch
-
-
-def make_env(game, eval):
-    if eval:
-        env = gym.make('ALE/' + game + '-v5')
-    else:
-        env = gym.make('ALE/' + game + '-v5')
-    env.seed(runs + eval * 10000)
-
-    env = AtariPreprocessing(env.env,
-                             frame_skip=4,
-                             max_random_noops=30,
-                             terminal_on_life_loss=True)
-    env = TimeLimit(env, max_episode_steps=27000)
-    env = FrameStack(env, k=4)
-    env = ImageToPyTorch(env)
-
-    return env
+import torch
+import gymnasium as gym
 
 
 if __name__ == '__main__':
 
-    from DrQ_Agent_hacked import Agent
+    from Agent import Agent
 
-    #GAMESET IS WRONG
-    agent_name = "Replay_test"
-    """
-    Changes:
-    Games
-    collecting churn
-    """
+    agent_name = "TBD"
 
-    # 12 sets - Iridis cpu
-    gameset = [["Alien"],["Amidar"],["Assault"],["Asterix"],["BankHeist"],["BattleZone"],["Boxing"],["Breakout"],
-                ["ChopperCommand"],["CrazyClimber"],["DemonAttack"],["Freeway"],["Frostbite"],["Gopher"],["Hero"],["Jamesbond"],
-               ["Kangaroo"],["Krull"],["KungFuMaster"],["MsPacman"], ["Pong"],["PrivateEye"], ["Qbert"], ["RoadRunner"], ["Seaquest"], ["UpNDown"]]
-    """
-    # 12 sets - Iridis alpha
-    gameset = [["Alien","Amidar","Assault"],
-               ["Asterix","BankHeist"],
-               ["BattleZone","Boxing"],
-               ["Breakout","ChopperCommand"],
-               ["CrazyClimber","DemonAttack"],
-               ["Freeway","Frostbite"],
-               ["Gopher","Hero"],
-               ["Jamesbond","Kangaroo"],
-               ["Krull","KungFuMaster"],
-               ["MsPacman", "Pong"],
-               ["PrivateEye", "Qbert"],
-               ["RoadRunner", "Seaquest", "UpNDown"]]
-    """
+    # atari-3 : Battle Zone, Name This Game, Phoenix
+    # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
 
-    # 12 sets - Iridis gpu
+    num_envs = 1
+    n_steps = 100000 #50000000
+    gameset = ["UpNDown"]
 
-    # 12 sets - Iridis gpu - TEMP Add this back in
-    """gameset = [["Alien","Amidar","Assault","Asterix","BankHeist"],
-               ["BattleZone","Boxing", "Breakout","ChopperCommand"],
-               ["CrazyClimber","DemonAttack", "Freeway","Frostbite"],
-               ["Gopher","Hero", "Jamesbond","Kangaroo"],
-               ["Krull","KungFuMaster", "MsPacman", "Pong"],
-               ["PrivateEye", "Qbert", "RoadRunner", "Seaquest", "UpNDown"]]"""
+    print("Currently Playing Game(s): " + str(gameset))
 
-    """
-    # 3 Sets - RTX 4090
-    gameset = [["Alien","Amidar","Assault","Asterix", "BankHeist","BattleZone","Boxing","Breakout"],
-               ["ChopperCommand","CrazyClimber","DemonAttack","Freeway", "Frostbite","Gopher","Hero","Jamesbond", "Kangaroo"],
-               ["Krull","KungFuMaster","MsPacman", "Pong", "PrivateEye", "Qbert", "RoadRunner", "Seaquest", "UpNDown"]]
-
-
-    #single set - util
-    gameset = [["Alien","Amidar","Assault","Asterix","BankHeist","BattleZone","Boxing","Breakout",
-                "ChopperCommand","CrazyClimber","DemonAttack","Freeway","Frostbite","Gopher","Hero","Jamesbond",
-               "Kangaroo","Krull","KungFuMaster","MsPacman", "Pong","PrivateEye", "Qbert", "RoadRunner", "Seaquest", "UpNDown"]]
-
-    """
-
-    gameset = [["UpNDown"]]
-
-    gameset_idx = int(sys.argv[1])
-
-    games = gameset[gameset_idx]
-    print("Currently Playing Games: " + str(games))
-
-    gpu = sys.argv[2]
-    device = T.device('cuda:' + gpu if T.cuda.is_available() else 'cpu')
+    gpu = sys.argv[1]
+    device = torch.device('cuda:' + gpu if torch.cuda.is_available() else 'cpu')
     print("Device: " + str(device))
 
-    try:
-        run = int(sys.argv[3])
-        run_spec = True
-        print("Run number: " + str(run))
-    except:
-        run_spec = False
+    for game in gameset:
 
-    for runs in range(5):
-        if run_spec:
-            runs += run
+        # gym version 0.25.2
+        # ie pre 5 arg step
+        env = gym.vector.AsyncVectorEnv([lambda: gym.wrappers.FrameStack(
+            gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(num_envs)])
 
-        for game in games:
+        print(env.observation_space)
+        print(env.action_space[0])
 
-            # gym version 0.25.2
-            # ie pre 5 arg step
-            env = make_env(game, eval=False)
+        agent = Agent(n_actions=env.action_space[0].n, input_dims=[4, 84, 84], device=device, num_envs=num_envs,
+                      agent_name=agent_name, total_frames=n_steps)
 
-            print(env.observation_space)
-            print(env.action_space)
+        scores = []
+        scores_temp = []
+        steps = 0
+        episodes = 0
+        start = time.time()
+        while steps < n_steps:
 
-            agent = Agent(n_actions=env.action_space.n, input_dims=[4, 84, 84], total_frames=10000000, device=device,
-                          game=game, run=runs, name=agent_name)
+            score = 0
+            episodes += 1
+            done = False
+            observation, info = env.reset()
 
-            scores = []
-            scores_temp = []
-            n_steps = 100000
-            steps = 0
-            episodes = 0
-            start = time.time()
             while steps < n_steps:
+                steps += num_envs
 
-                score = 0
-                episodes += 1
-                done = False
-                observation = env.reset()
-                while not done and steps < n_steps:
-                    steps += 1
-                    action = agent.choose_action(observation)
-                    observation_, reward, done_, info = env.step(action)
-                    #env.render()
+                action = agent.choose_action(observation)  # this takes and return batches
 
-                    time_limit = 'TimeLimit.truncated' in info
-                    done = info['game_over'] or time_limit
+                env.step_async(action)
+                # need to sort out new API
 
-                    score += reward
-                    reward = np.clip(reward, -1., 1.)
+                # this is placed here so learning takes place while step is happening
+                agent.learn()
 
-                    agent.store_transition(observation, action, reward,
-                                           observation_, done_)
+                observation_, reward, done_, trun_, info = env.step_wait()
 
-                    agent.learn()
+                #TRUNCATATION NOT IMPLEMENTED
+                done_ = np.logical_or(done_, trun_)
 
-                    observation = deepcopy(observation_)
+                score += reward
+                reward = np.clip(reward, -1., 1.)
 
-                if steps < n_steps:
+                for stream in range(num_envs):
+                    agent.store_transition(observation[stream], action[stream], reward[stream], done_[stream], stream=stream)
+
+                observation = deepcopy(observation_)
+
+                if steps % 1200 == 0:
                     scores.append([score, steps])
                     scores_temp.append(score)
 
@@ -157,31 +85,31 @@ if __name__ == '__main__':
                         print('{} {} avg score {:.2f} total_steps {:.0f} fps {:.2f}'
                               .format(agent_name, game, avg_score, steps, steps / (time.time() - start)), flush=True)
 
-            fname = agent_name + game + "Experiment (" + str(runs) + ').npy'
-            np.save(fname, np.array(scores))
-            env = make_env(game, eval=True)
-            agent.set_eval_mode()
-            evals = []
-            steps = 0
-            eval_episodes = 0
-            while eval_episodes < 100:
-                done = False
-                observation = env.reset()
-                score = 0
-                while not done:
-                    steps += 1
-                    action = agent.choose_action(observation)
-                    observation_, reward, _, info = env.step(action)
+        fname = agent_name + game + "Experiment.npy"
+        np.save(fname, np.array(scores))
+        env = make_env(game, eval=True)
+        agent.set_eval_mode()
+        evals = []
+        steps = 0
+        eval_episodes = 0
+        while eval_episodes < 100:
+            done = False
+            observation = env.reset()
+            score = 0
+            while not done:
+                steps += 1
+                action = agent.choose_action(observation)
+                observation_, reward, _, info = env.step(action)
 
-                    time_limit = 'TimeLimit.truncated' in info
-                    done = info['game_over'] or time_limit
+                time_limit = 'TimeLimit.truncated' in info
+                done = info['game_over'] or time_limit
 
-                    score += reward
-                    observation = observation_
+                score += reward
+                observation = observation_
 
-                evals.append(score)
-                print("Evaluation Score: " + str(score))
-                eval_episodes += 1
+            evals.append(score)
+            print("Evaluation Score: " + str(score))
+            eval_episodes += 1
 
-            fname = agent_name + game + "Evaluation (" + str(runs) + ').npy'
-            np.save(fname, np.array(evals))
+        fname = agent_name + game + "Evaluation.npy"
+        np.save(fname, np.array(evals))

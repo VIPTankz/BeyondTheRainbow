@@ -608,8 +608,8 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         def identity(p): return p
 
-        norm_func = torch.nn.utils.spectral_norm if (spectral_norm == 'all') else identity
-        norm_func_last = torch.nn.utils.spectral_norm if (spectral_norm == 'last' or spectral_norm == 'all') else identity
+        norm_func = torch.nn.utils.parametrizations.spectral_norm if (spectral_norm == 'all') else identity
+        norm_func_last = torch.nn.utils.parametrizations.spectral_norm if (spectral_norm == 'last' or spectral_norm == 'all') else identity
 
         self.conv = nn.Sequential(
             ImpalaCNNBlock(in_depth, 16*model_size, norm_func=norm_func),
@@ -688,7 +688,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         taus = torch.rand(batch_size, n_tau).to(self.device).unsqueeze(-1) #(batch_size, n_tau, 1)
         cos = torch.cos(taus*self.pis)
 
-        assert cos.shape == (batch_size,n_tau,self.n_cos), "cos shape is incorrect"
+        assert cos.shape == (batch_size, n_tau, self.n_cos), "cos shape is incorrect"
         return cos, taus
 
     def save_checkpoint(self, name):

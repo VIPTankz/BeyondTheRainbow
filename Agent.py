@@ -13,42 +13,26 @@ import matplotlib.pyplot as plt
 #from torchsummary import summary
 import math
 from networks import ImpalaCNNLarge, ImpalaCNNLargeIQN, NatureIQN
+import traceback
 
 class EpsilonGreedy():
-    def __init__(self, eps_start, eps_steps, eps_final, sticky, instances, action_space):
+    def __init__(self, eps_start, eps_steps, eps_final, action_space):
         self.eps = eps_start
         self.steps = eps_steps
         self.eps_final = eps_final
-        self.sticky = sticky
-        self.max_sticky_actions = 4
         self.action_space = action_space
-        self.remaining_actions = [0 for i in range(instances)]
-        self.prev_actions = [-1 for i in range(instances)]
 
     def update_eps(self):
         self.eps = max(self.eps - (self.eps - self.eps_final) / self.steps, self.eps_final)
 
-    def choose_action(self, i):
-        if self.sticky:
-            if self.remaining_actions[i] > 0:
-                self.remaining_actions[i] -= 1
-                return self.prev_actions[i]
-
-            if np.random.random() > self.eps:
-                return None
-
-            self.remaining_actions[i] = np.random.randint(self.max_sticky_actions)
-            action = np.random.choice(self.action_space)
-            self.prev_actions[i] = action
-            return action
+    def choose_action(self):
+        if np.random.random() > self.eps:
+            return None
         else:
-            if np.random.random() > self.eps:
-                return None
-            else:
-                return np.random.choice(self.action_space)
+            return np.random.choice(self.action_space)
 
 class Agent():
-    def __init__(self, n_actions, input_dims, device, num_envs, agent_name):
+    def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -62,17 +46,17 @@ class Agent():
 
         # IMPORTANT params, check these
         self.lr = 5e-5 #5e-5  # 0.0001 for sample efficient version
-        self.min_sampling_size = 80000
+        self.min_sampling_size = 1000
         self.n = 3
         self.gamma = 0.99
         self.batch_size = 16
 
         self.replay_ratio = 1
-        self.model_size = 2  # Scaling of IMPALA network
+        self.model_size = 4  # Scaling of IMPALA network
 
         # do not use both spectral and noisy, they will interfere with each other
-        self.noisy = False
-        self.spectral_norm = True
+        self.noisy = True
+        self.spectral_norm = False  # this produces nans for some reason!
 
         self.per_splits = 2
 
@@ -96,12 +80,11 @@ class Agent():
         self.loading_checkpoint = False
         self.viewing_output = False
 
-        self.total_frames = 50000000  # This needs to be divided by replay_period
+        self.total_frames = int(total_frames / num_envs)  # This needs to be divided by replay_period
+        # this is the number of gradient steps! not number of frames
+
         if not self.loading_checkpoint:
             self.per_beta = 0.4
-
-        if self.viewing_output:
-            self.viewer = OutputViewer(["None", "Right", "Left", "Forward", "Backward", "Jump"])
 
         self.soft_updates = False
         if self.soft_updates:
@@ -112,7 +95,7 @@ class Agent():
         if self.iqn:
             self.num_tau = 8
 
-        self.per_alpha = 0.5
+        self.per_alpha = 0.2
         if self.loading_checkpoint:
             self.per_beta = 0.8
             self.min_sampling_size = 300000
@@ -126,21 +109,18 @@ class Agent():
             if not self.loading_checkpoint:
                 self.eps_start = 1.0
                 self.eps_steps = 125000
-                self.sticky = False
                 self.eps_final = 0.01
             else:
                 self.eps_start = 0.01
                 self.eps_steps = 250000
-                self.sticky = False
                 self.eps_final = 0.01
 
-            self.epsilon = EpsilonGreedy(self.eps_start, self.eps_steps, self.eps_final, self.sticky, num_envs, self.action_space)
+            self.epsilon = EpsilonGreedy(self.eps_start, self.eps_steps, self.eps_final, self.action_space)
 
         self.num_envs = num_envs
         self.memories = []
         for i in range(num_envs):
             self.memories.append(ReplayMemory(self.max_mem_size // num_envs, self.n, self.gamma, device, alpha=self.per_alpha, beta=self.per_beta))
-
 
         if self.impala:
             if not self.iqn:
@@ -183,8 +163,6 @@ class Agent():
 
         self.priority_weight_increase = (1 - self.per_beta) / (self.total_frames - self.min_sampling_size)
 
-
-
     def get_grad_steps(self):
         return self.grad_steps
 
@@ -193,21 +171,22 @@ class Agent():
         self.tgt_net.eval()
         self.eval_mode = True
 
-    def choose_action(self, observation, instance):
+    def choose_action(self, observation):
         with T.no_grad():
             if self.noisy:
                 self.net.reset_noise()
-            else:
-                action = self.epsilon.choose_action(instance)
-                if action is not None:
-                    return action
 
-            state = T.tensor(np.array([observation]), dtype=T.float).to(self.net.device)
-
+            state = T.tensor(np.array(list(observation)), dtype=T.float).to(self.net.device)
             qvals = self.net.qvals(state)
-            if self.viewing_output:
-                self.viewer.update(qvals[0].cpu().detach().tolist())
-            x = T.argmax(qvals).item()
+            x = T.argmax(qvals, dim=1)
+            # this should contain (num_envs) different actions
+
+            if not self.noisy:
+                for i in range(len(observation)):
+                    action = self.epsilon.choose_action()
+                    if action is not None:
+                        x[i] = action
+
             return x
 
 
@@ -284,7 +263,10 @@ class Agent():
             dones = torch.cat((dones, donesN))
             weights = torch.cat((weights, weightsN))
         except Exception as e:
-            print(e)
+            tb = traceback.format_exc()
+            print(tb)
+            print("Infinity Error?")
+            raise Exception("stop")
             return
 
         states = states.clone().detach().to(self.net.device)
