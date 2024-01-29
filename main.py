@@ -6,7 +6,7 @@ import sys
 import torch
 import gymnasium as gym
 import wandb
-
+from torch.profiler import profile, record_function, ProfilerActivity
 def make_env(envs_create):
     return gym.vector.AsyncVectorEnv([lambda: gym.wrappers.FrameStack(
         gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(envs_create)],
@@ -17,12 +17,13 @@ if __name__ == '__main__':
 
     from Agent import Agent
 
+
     agent_name = "BTR_og"
 
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
 
-    num_envs = 4
+    num_envs = 8
     n_steps = 50000000
     num_eval_episodes = 100
     eval_every = 1000000
@@ -125,52 +126,52 @@ if __name__ == '__main__':
             if done_[stream]:
                 observation[stream] = deepcopy(info["final_observation"][stream])
 
-        if steps % 1200 == 0 and len(scores) > 0:
+    if steps % 1200 == 0 and len(scores) > 0:
 
-            avg_score = np.mean(scores_temp[-50:])
+        avg_score = np.mean(scores_temp[-50:])
 
-            if episodes % 1 == 0:
-                print('{} {} avg score {:.2f} total_steps {:.0f} fps {:.2f}'
-                      .format(agent_name, game, avg_score, steps, steps / (time.time() - start)), flush=True)
+        if episodes % 1 == 0:
+            print('{} {} avg score {:.2f} total_steps {:.0f} fps {:.2f}'
+                  .format(agent_name, game, avg_score, steps, steps / (time.time() - start)), flush=True)
 
-        # Evaluation
-        if steps >= next_eval or steps > n_steps:
+    # Evaluation
+    if steps >= next_eval or steps > n_steps:
 
-            fname = agent_name + game + "Experiment.npy"
-            np.save(fname, np.array(scores))
+        fname = agent_name + game + "Experiment.npy"
+        np.save(fname, np.array(scores))
 
-            eval_env = make_env(1)
+        eval_env = make_env(1)
 
-            agent.set_eval_mode()
-            evals = []
-            eval_episodes = 0
-            while eval_episodes < num_eval_episodes:
-                eval_done = np.array([False])
-                eval_observation, _ = eval_env.reset()
-                eval_score = 0
-                while not eval_done.any():
-                    eval_action = agent.choose_action(observation)
+        agent.set_eval_mode()
+        evals = []
+        eval_episodes = 0
+        while eval_episodes < num_eval_episodes:
+            eval_done = np.array([False])
+            eval_observation, _ = eval_env.reset()
+            eval_score = 0
+            while not eval_done.any():
+                eval_action = agent.choose_action(observation)
 
-                    eval_observation_, eval_reward, eval_done_, eval_trun_, eval_info = eval_env.step(eval_action)
+                eval_observation_, eval_reward, eval_done_, eval_trun_, eval_info = eval_env.step(eval_action)
 
-                    # TRUNCATATION NOT IMPLEMENTED
-                    eval_done = np.logical_or(eval_done_, eval_trun_)
-                    eval_reward = eval_reward[0]
+                # TRUNCATATION NOT IMPLEMENTED
+                eval_done = np.logical_or(eval_done_, eval_trun_)
+                eval_reward = eval_reward[0]
 
-                    eval_score += eval_reward
-                    eval_observation = eval_observation_
+                eval_score += eval_reward
+                eval_observation = eval_observation_
 
-                evals.append(eval_score)
-                wandb.log({"eval_scores": eval_score})
-                print("Evaluation Score: " + str(eval_score))
-                eval_episodes += 1
-                print("Average:")
-                print(np.mean(np.array(evals)))
+            evals.append(eval_score)
+            wandb.log({"eval_scores": eval_score})
+            print("Evaluation Score: " + str(eval_score))
+            eval_episodes += 1
+            print("Average:")
+            print(np.mean(np.array(evals)))
 
-            fname = agent_name + game + "Evaluation" + str(next_eval) + ".npy"
-            np.save(fname, np.array(evals))
-            next_eval += eval_every
-            agent.set_train_mode()
+        fname = agent_name + game + "Evaluation" + str(next_eval) + ".npy"
+        np.save(fname, np.array(evals))
+        next_eval += eval_every
+        agent.set_train_mode()
 
 
-    wandb.finish()
+wandb.finish()

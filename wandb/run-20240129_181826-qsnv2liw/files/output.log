@@ -1,0 +1,12 @@
+Traceback (most recent call last):
+  File "C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\main.py", line 137, in <module>
+    print(prof.key_averages().table(sort_by="cpu_time_total", row_limit=10))
+          ^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\TYLER\AppData\Local\Programs\Python\Python311\Lib\site-packages\torch\profiler\profiler.py", line 207, in key_averages
+    return self.profiler.key_averages(group_by_input_shape, group_by_stack_n)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\TYLER\AppData\Local\Programs\Python\Python311\Lib\site-packages\torch\autograd\profiler.py", line 390, in key_averages
+    self._check_finish()
+  File "C:\Users\TYLER\AppData\Local\Programs\Python\Python311\Lib\site-packages\torch\autograd\profiler.py", line 348, in _check_finish
+    raise RuntimeError("Profiler didn't finish running")
+RuntimeError: Profiler didn't finish running

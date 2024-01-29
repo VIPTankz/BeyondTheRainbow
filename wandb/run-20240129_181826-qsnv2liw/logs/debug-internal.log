@@ -1,0 +1,185 @@
+2024-01-29 18:18:26,534 INFO    StreamThr :24356 [internal.py:wandb_internal():86] W&B internal server running at pid: 24356, started at: 2024-01-29 18:18:26.533678
+2024-01-29 18:18:26,535 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: status
+2024-01-29 18:18:26,539 INFO    WriterThread:24356 [datastore.py:open_for_write():87] open: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\run-qsnv2liw.wandb
+2024-01-29 18:18:26,539 DEBUG   SenderThread:24356 [sender.py:send():382] send: header
+2024-01-29 18:18:26,579 DEBUG   SenderThread:24356 [sender.py:send():382] send: run
+2024-01-29 18:18:26,968 INFO    SenderThread:24356 [dir_watcher.py:__init__():211] watching files in: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files
+2024-01-29 18:18:26,968 INFO    SenderThread:24356 [sender.py:_start_run_threads():1136] run started: qsnv2liw with start time 1706552306.535171
+2024-01-29 18:18:26,980 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: check_version
+2024-01-29 18:18:26,980 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: check_version
+2024-01-29 18:18:27,064 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: run_start
+2024-01-29 18:18:27,087 DEBUG   HandlerThread:24356 [system_info.py:__init__():27] System info init
+2024-01-29 18:18:27,087 DEBUG   HandlerThread:24356 [system_info.py:__init__():42] System info init done
+2024-01-29 18:18:27,087 INFO    HandlerThread:24356 [system_monitor.py:start():194] Starting system monitor
+2024-01-29 18:18:27,088 INFO    SystemMonitor:24356 [system_monitor.py:_start():158] Starting system asset monitoring threads
+2024-01-29 18:18:27,088 INFO    HandlerThread:24356 [system_monitor.py:probe():214] Collecting system info
+2024-01-29 18:18:27,093 INFO    SystemMonitor:24356 [interfaces.py:start():190] Started cpu monitoring
+2024-01-29 18:18:27,093 INFO    SystemMonitor:24356 [interfaces.py:start():190] Started disk monitoring
+2024-01-29 18:18:27,106 INFO    SystemMonitor:24356 [interfaces.py:start():190] Started gpu monitoring
+2024-01-29 18:18:27,116 DEBUG   HandlerThread:24356 [system_info.py:probe():151] Probing system
+2024-01-29 18:18:27,117 INFO    SystemMonitor:24356 [interfaces.py:start():190] Started memory monitoring
+2024-01-29 18:18:27,126 INFO    SystemMonitor:24356 [interfaces.py:start():190] Started network monitoring
+2024-01-29 18:18:27,127 DEBUG   HandlerThread:24356 [system_info.py:_probe_git():136] Probing git
+2024-01-29 18:18:27,198 DEBUG   HandlerThread:24356 [system_info.py:_probe_git():144] Probing git done
+2024-01-29 18:18:27,198 DEBUG   HandlerThread:24356 [system_info.py:probe():199] Probing system done
+2024-01-29 18:18:27,198 DEBUG   HandlerThread:24356 [system_monitor.py:probe():223] {'os': 'Windows-10-10.0.19045-SP0', 'python': '3.11.0', 'heartbeatAt': '2024-01-29T18:18:27.117110', 'startedAt': '2024-01-29T18:18:26.526688', 'docker': None, 'cuda': None, 'args': ('0', '0'), 'state': 'running', 'program': 'C:\\Users\\TYLER\\Documents\\GitHub\\BeyondTheRainbow\\main.py', 'codePathLocal': 'main.py', 'codePath': 'main.py', 'git': {'remote': 'https://github.com/VIPTankz/BeyondTheRainbow.git', 'commit': '54db61f3b803e004fb693308b06d395d844327e8'}, 'email': 't.y.l.e.r.14@live.co.uk', 'root': 'C:/Users/TYLER/Documents/GitHub/BeyondTheRainbow', 'host': 'LAPTOP-0FL29BIK', 'username': 'TYLER', 'executable': 'C:\\Users\\TYLER\\AppData\\Local\\Programs\\Python\\Python311\\python.exe', 'cpu_count': 8, 'cpu_count_logical': 16, 'cpu_freq': {'current': 3201.0, 'min': 0.0, 'max': 3201.0}, 'cpu_freq_per_core': [{'current': 3201.0, 'min': 0.0, 'max': 3201.0}], 'disk': {'/': {'total': 952.7548789978027, 'used': 539.4583206176758}}, 'gpu': 'NVIDIA GeForce RTX 3080 Laptop GPU', 'gpu_count': 1, 'gpu_devices': [{'name': 'NVIDIA GeForce RTX 3080 Laptop GPU', 'memory_total': 8589934592}], 'memory': {'total': 15.355525970458984}}
+2024-01-29 18:18:27,198 INFO    HandlerThread:24356 [system_monitor.py:probe():224] Finished collecting system info
+2024-01-29 18:18:27,198 INFO    HandlerThread:24356 [system_monitor.py:probe():227] Publishing system info
+2024-01-29 18:18:27,199 INFO    HandlerThread:24356 [system_monitor.py:probe():229] Finished publishing system info
+2024-01-29 18:18:27,203 DEBUG   SenderThread:24356 [sender.py:send():382] send: files
+2024-01-29 18:18:27,203 INFO    SenderThread:24356 [sender.py:_save_file():1403] saving file wandb-metadata.json with policy now
+2024-01-29 18:18:27,210 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: python_packages
+2024-01-29 18:18:27,210 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: python_packages
+2024-01-29 18:18:27,211 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: stop_status
+2024-01-29 18:18:27,211 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: stop_status
+2024-01-29 18:18:27,212 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: internal_messages
+2024-01-29 18:18:27,427 DEBUG   SenderThread:24356 [sender.py:send():382] send: telemetry
+2024-01-29 18:18:27,751 INFO    wandb-upload_0:24356 [upload_job.py:push():131] Uploaded file C:\Users\TYLER\AppData\Local\Temp\tmpdse5opclwandb\p6qm99ec-wandb-metadata.json
+2024-01-29 18:18:27,984 INFO    Thread-16 :24356 [dir_watcher.py:_on_file_created():271] file/dir created: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\requirements.txt
+2024-01-29 18:18:27,984 INFO    Thread-16 :24356 [dir_watcher.py:_on_file_created():271] file/dir created: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\wandb-metadata.json
+2024-01-29 18:18:28,051 DEBUG   SenderThread:24356 [sender.py:send():382] send: exit
+2024-01-29 18:18:28,052 INFO    SenderThread:24356 [sender.py:send_exit():589] handling exit code: 1
+2024-01-29 18:18:28,052 INFO    SenderThread:24356 [sender.py:send_exit():591] handling runtime: 0
+2024-01-29 18:18:28,052 INFO    SenderThread:24356 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-29 18:18:28,052 INFO    SenderThread:24356 [sender.py:send_exit():597] send defer
+2024-01-29 18:18:28,053 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:28,053 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 0
+2024-01-29 18:18:28,053 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:28,053 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 0
+2024-01-29 18:18:28,053 INFO    SenderThread:24356 [sender.py:transition_state():617] send defer: 1
+2024-01-29 18:18:28,053 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:28,053 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 1
+2024-01-29 18:18:28,053 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:28,053 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 1
+2024-01-29 18:18:28,053 INFO    SenderThread:24356 [sender.py:transition_state():617] send defer: 2
+2024-01-29 18:18:28,053 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:28,053 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 2
+2024-01-29 18:18:28,053 INFO    HandlerThread:24356 [system_monitor.py:finish():203] Stopping system monitor
+2024-01-29 18:18:28,054 DEBUG   SystemMonitor:24356 [system_monitor.py:_start():172] Starting system metrics aggregation loop
+2024-01-29 18:18:28,054 DEBUG   SystemMonitor:24356 [system_monitor.py:_start():179] Finished system metrics aggregation loop
+2024-01-29 18:18:28,054 INFO    HandlerThread:24356 [interfaces.py:finish():202] Joined cpu monitor
+2024-01-29 18:18:28,063 DEBUG   SystemMonitor:24356 [system_monitor.py:_start():183] Publishing last batch of metrics
+2024-01-29 18:18:28,063 INFO    HandlerThread:24356 [interfaces.py:finish():202] Joined disk monitor
+2024-01-29 18:18:28,126 INFO    HandlerThread:24356 [interfaces.py:finish():202] Joined gpu monitor
+2024-01-29 18:18:28,126 INFO    HandlerThread:24356 [interfaces.py:finish():202] Joined memory monitor
+2024-01-29 18:18:28,126 INFO    HandlerThread:24356 [interfaces.py:finish():202] Joined network monitor
+2024-01-29 18:18:28,126 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:28,126 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 2
+2024-01-29 18:18:28,126 INFO    SenderThread:24356 [sender.py:transition_state():617] send defer: 3
+2024-01-29 18:18:28,126 DEBUG   SenderThread:24356 [sender.py:send():382] send: stats
+2024-01-29 18:18:28,126 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:28,127 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 3
+2024-01-29 18:18:28,127 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:28,127 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 3
+2024-01-29 18:18:28,127 INFO    SenderThread:24356 [sender.py:transition_state():617] send defer: 4
+2024-01-29 18:18:28,127 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:28,127 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 4
+2024-01-29 18:18:28,127 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:28,127 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 4
+2024-01-29 18:18:28,127 INFO    SenderThread:24356 [sender.py:transition_state():617] send defer: 5
+2024-01-29 18:18:28,127 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:28,127 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 5
+2024-01-29 18:18:28,128 DEBUG   SenderThread:24356 [sender.py:send():382] send: summary
+2024-01-29 18:18:28,128 INFO    SenderThread:24356 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-29 18:18:28,128 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:28,128 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 5
+2024-01-29 18:18:28,128 INFO    SenderThread:24356 [sender.py:transition_state():617] send defer: 6
+2024-01-29 18:18:28,129 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:28,129 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 6
+2024-01-29 18:18:28,129 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:28,129 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 6
+2024-01-29 18:18:28,131 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: status_report
+2024-01-29 18:18:28,312 INFO    SenderThread:24356 [sender.py:transition_state():617] send defer: 7
+2024-01-29 18:18:28,312 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:28,312 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 7
+2024-01-29 18:18:28,312 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:28,312 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 7
+2024-01-29 18:18:28,986 INFO    Thread-16 :24356 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\config.yaml
+2024-01-29 18:18:28,987 INFO    Thread-16 :24356 [dir_watcher.py:_on_file_created():271] file/dir created: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\wandb-summary.json
+2024-01-29 18:18:28,987 INFO    Thread-16 :24356 [dir_watcher.py:_on_file_created():271] file/dir created: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\output.log
+2024-01-29 18:18:29,062 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: poll_exit
+2024-01-29 18:18:30,054 INFO    SenderThread:24356 [sender.py:transition_state():617] send defer: 8
+2024-01-29 18:18:30,054 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: poll_exit
+2024-01-29 18:18:30,054 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:30,055 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 8
+2024-01-29 18:18:30,055 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:30,055 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 8
+2024-01-29 18:18:30,055 INFO    SenderThread:24356 [job_builder.py:build():296] Attempting to build job artifact
+2024-01-29 18:18:30,056 INFO    SenderThread:24356 [job_builder.py:_get_source_type():426] is repo sourced job
+2024-01-29 18:18:30,064 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: poll_exit
+2024-01-29 18:18:30,102 INFO    SenderThread:24356 [job_builder.py:build():402] adding wandb-job metadata file
+2024-01-29 18:18:30,107 INFO    SenderThread:24356 [sender.py:transition_state():617] send defer: 9
+2024-01-29 18:18:30,108 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: poll_exit
+2024-01-29 18:18:30,108 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:30,108 DEBUG   SenderThread:24356 [sender.py:send():382] send: artifact
+2024-01-29 18:18:30,108 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 9
+2024-01-29 18:18:30,844 INFO    SenderThread:24356 [sender.py:send_artifact():1494] sent artifact job-https___github.com_VIPTankz_BeyondTheRainbow.git_main.py - {'id': 'QXJ0aWZhY3Q6NzA2ODcwODY3', 'state': 'COMMITTED', 'artifactSequence': {'id': 'QXJ0aWZhY3RDb2xsZWN0aW9uOjEzNDc4NjA5Mg==', 'latestArtifact': {'id': 'QXJ0aWZhY3Q6NzA2ODcwODY3', 'versionIndex': 4}}}
+2024-01-29 18:18:30,844 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:30,844 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 9
+2024-01-29 18:18:30,844 INFO    SenderThread:24356 [dir_watcher.py:finish():358] shutting down directory watcher
+2024-01-29 18:18:30,989 INFO    Thread-16 :24356 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\output.log
+2024-01-29 18:18:30,990 INFO    SenderThread:24356 [dir_watcher.py:finish():388] scan: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files
+2024-01-29 18:18:30,990 INFO    SenderThread:24356 [dir_watcher.py:finish():402] scan save: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\config.yaml config.yaml
+2024-01-29 18:18:30,990 INFO    SenderThread:24356 [dir_watcher.py:finish():402] scan save: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\output.log output.log
+2024-01-29 18:18:30,991 INFO    SenderThread:24356 [dir_watcher.py:finish():402] scan save: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\requirements.txt requirements.txt
+2024-01-29 18:18:30,992 INFO    SenderThread:24356 [dir_watcher.py:finish():402] scan save: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\wandb-metadata.json wandb-metadata.json
+2024-01-29 18:18:30,993 INFO    SenderThread:24356 [dir_watcher.py:finish():402] scan save: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\wandb-summary.json wandb-summary.json
+2024-01-29 18:18:30,995 INFO    SenderThread:24356 [sender.py:transition_state():617] send defer: 10
+2024-01-29 18:18:30,996 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:30,996 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 10
+2024-01-29 18:18:30,998 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:30,998 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 10
+2024-01-29 18:18:30,998 INFO    SenderThread:24356 [file_pusher.py:finish():175] shutting down file pusher
+2024-01-29 18:18:31,080 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: poll_exit
+2024-01-29 18:18:31,081 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: poll_exit
+2024-01-29 18:18:31,346 INFO    wandb-upload_0:24356 [upload_job.py:push():131] Uploaded file C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\config.yaml
+2024-01-29 18:18:31,392 INFO    wandb-upload_2:24356 [upload_job.py:push():131] Uploaded file C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\requirements.txt
+2024-01-29 18:18:31,404 INFO    wandb-upload_3:24356 [upload_job.py:push():131] Uploaded file C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\wandb-summary.json
+2024-01-29 18:18:31,454 INFO    wandb-upload_1:24356 [upload_job.py:push():131] Uploaded file C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\files\output.log
+2024-01-29 18:18:31,665 INFO    Thread-15 (_thread_body):24356 [sender.py:transition_state():617] send defer: 11
+2024-01-29 18:18:31,665 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:31,666 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 11
+2024-01-29 18:18:31,666 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:31,666 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 11
+2024-01-29 18:18:31,666 INFO    SenderThread:24356 [file_pusher.py:join():181] waiting for file pusher
+2024-01-29 18:18:31,666 INFO    SenderThread:24356 [sender.py:transition_state():617] send defer: 12
+2024-01-29 18:18:31,666 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:31,666 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 12
+2024-01-29 18:18:31,666 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:31,666 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 12
+2024-01-29 18:18:31,666 INFO    SenderThread:24356 [file_stream.py:finish():595] file stream finish called
+2024-01-29 18:18:32,081 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: poll_exit
+2024-01-29 18:18:32,112 INFO    SenderThread:24356 [file_stream.py:finish():599] file stream finish is done
+2024-01-29 18:18:32,112 INFO    SenderThread:24356 [sender.py:transition_state():617] send defer: 13
+2024-01-29 18:18:32,113 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: poll_exit
+2024-01-29 18:18:32,113 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:32,113 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 13
+2024-01-29 18:18:32,113 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:32,113 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 13
+2024-01-29 18:18:32,113 INFO    SenderThread:24356 [sender.py:transition_state():617] send defer: 14
+2024-01-29 18:18:32,113 DEBUG   SenderThread:24356 [sender.py:send():382] send: final
+2024-01-29 18:18:32,113 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: defer
+2024-01-29 18:18:32,114 DEBUG   SenderThread:24356 [sender.py:send():382] send: footer
+2024-01-29 18:18:32,114 INFO    HandlerThread:24356 [handler.py:handle_request_defer():172] handle defer: 14
+2024-01-29 18:18:32,114 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: defer
+2024-01-29 18:18:32,114 INFO    SenderThread:24356 [sender.py:send_request_defer():613] handle sender defer: 14
+2024-01-29 18:18:32,114 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: poll_exit
+2024-01-29 18:18:32,115 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: poll_exit
+2024-01-29 18:18:32,115 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: server_info
+2024-01-29 18:18:32,115 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: get_summary
+2024-01-29 18:18:32,115 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: sampled_history
+2024-01-29 18:18:32,115 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: internal_messages
+2024-01-29 18:18:32,115 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: poll_exit
+2024-01-29 18:18:32,115 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: poll_exit
+2024-01-29 18:18:32,115 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: server_info
+2024-01-29 18:18:32,116 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: job_info
+2024-01-29 18:18:32,245 DEBUG   SenderThread:24356 [sender.py:send_request():409] send_request: job_info
+2024-01-29 18:18:32,246 INFO    MainThread:24356 [wandb_run.py:_footer_history_summary_info():3857] rendering history
+2024-01-29 18:18:32,246 INFO    MainThread:24356 [wandb_run.py:_footer_history_summary_info():3889] rendering summary
+2024-01-29 18:18:32,246 INFO    MainThread:24356 [wandb_run.py:_footer_sync_info():3816] logging synced files
+2024-01-29 18:18:32,249 DEBUG   HandlerThread:24356 [handler.py:handle_request():146] handle_request: shutdown
+2024-01-29 18:18:32,249 INFO    HandlerThread:24356 [handler.py:finish():869] shutting down handler
+2024-01-29 18:18:33,128 INFO    WriterThread:24356 [datastore.py:close():296] close: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_181826-qsnv2liw\run-qsnv2liw.wandb
+2024-01-29 18:18:33,250 INFO    SenderThread:24356 [sender.py:finish():1572] shutting down sender
+2024-01-29 18:18:33,250 INFO    SenderThread:24356 [file_pusher.py:finish():175] shutting down file pusher
+2024-01-29 18:18:33,250 INFO    SenderThread:24356 [file_pusher.py:join():181] waiting for file pusher

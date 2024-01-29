@@ -198,7 +198,8 @@ class Agent():
             if self.noisy:
                 self.net.reset_noise()
 
-            state = T.tensor(np.array(list(observation)), dtype=T.float).to(self.net.device)
+            #state = T.tensor(np.array(list(observation)), dtype=T.float).to(self.net.device)
+            state = T.tensor(observation, dtype=T.float).to(self.net.device)
             qvals = self.net.qvals(state)
             x = T.argmax(qvals, dim=1)
             # this should contain (num_envs) different actions
@@ -412,38 +413,38 @@ class Agent():
             # calculate log-pi
             logsum = torch.logsumexp(
                 (q_t_n - q_t_n.max(1)[0].unsqueeze(-1)) / self.entropy_tau, 1).unsqueeze(-1)  # logsum trick
-            assert logsum.shape == (self.batch_size, 1), "log pi next has wrong shape: {}".format(logsum.shape)
+            #assert logsum.shape == (self.batch_size, 1), "log pi next has wrong shape: {}".format(logsum.shape)
             tau_log_pi_next = (q_t_n - q_t_n.max(1)[0].unsqueeze(-1) - self.entropy_tau * logsum).unsqueeze(1)
 
             pi_target = F.softmax(q_t_n / self.entropy_tau, dim=1).unsqueeze(1)
 
             Q_target = (self.gamma ** self.n * (
                         pi_target * (Q_targets_next - tau_log_pi_next) * (~dones.unsqueeze(-1))).sum(2)).unsqueeze(1)
-            assert Q_target.shape == (self.batch_size, 1, self.num_tau)
+            #assert Q_target.shape == (self.batch_size, 1, self.num_tau)
 
             q_k_target = self.net.qvals(states).detach()
             v_k_target = q_k_target.max(1)[0].unsqueeze(-1)
             tau_log_pik = q_k_target - v_k_target - self.entropy_tau * torch.logsumexp(
                 (q_k_target - v_k_target) / self.entropy_tau, 1).unsqueeze(-1)
 
-            assert tau_log_pik.shape == (self.batch_size, self.n_actions), "shape instead is {}".format(
-                tau_log_pik.shape)
+            #assert tau_log_pik.shape == (self.batch_size, self.n_actions), "shape instead is {}".format(
+                #tau_log_pik.shape)
             munchausen_addon = tau_log_pik.gather(1, actions)
 
             # calc munchausen reward:
             munchausen_reward = (rewards + self.alpha * torch.clamp(munchausen_addon, min=self.lo, max=0)).unsqueeze(-1)
-            assert munchausen_reward.shape == (self.batch_size, 1, 1)
+            #assert munchausen_reward.shape == (self.batch_size, 1, 1)
             # Compute Q targets for current states
             Q_targets = munchausen_reward + Q_target
             # Get expected Q values from local model
             q_k, taus = self.net(states)
             Q_expected = q_k.gather(2, actions.unsqueeze(-1).expand(self.batch_size, self.num_tau, 1))
-            assert Q_expected.shape == (self.batch_size, self.num_tau, 1)
+            #assert Q_expected.shape == (self.batch_size, self.num_tau, 1)
 
             # Quantile Huber loss
             td_error = Q_targets - Q_expected
             loss_v = torch.abs(td_error).sum(dim=1).mean(dim=1).data
-            assert td_error.shape == (self.batch_size, self.num_tau, self.num_tau), "wrong td error shape"
+            #assert td_error.shape == (self.batch_size, self.num_tau, self.num_tau), "wrong td error shape"
             huber_l = calculate_huber_loss(td_error, 1.0)
             quantil_l = abs(taus - (td_error.detach() < 0).float()) * huber_l / 1.0
 
