@@ -3,7 +3,7 @@
 #SBATCH --ntasks=7
 #SBATCH --mem=96000
 #SBATCH -p batch
-#SBATCH --job-name=BTR_Atari
+#SBATCH --job-name=BTR_Atari_2
 #SBATCH --time=60:00:00
 #SBATCH --mail-user=tjc2g19@soton.ac.uk
 #SBATCH --mail-type=ALL
@@ -15,4 +15,5 @@ cd /home/$USER/BeyondTheRainbow
 pip install -e .
 export WANDB_MODE=offline
 
-staskfarm farm_atari0.txt
+
+staskfarm farm_atari1.txt
