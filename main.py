@@ -121,6 +121,10 @@ if __name__ == '__main__':
 
         observation = deepcopy(observation_)
 
+        for stream in range(num_envs):
+            if done_[stream]:
+                observation[stream] = deepcopy(info["final_observation"][stream])
+
         if steps % 1200 == 0 and len(scores) > 0:
 
             avg_score = np.mean(scores_temp[-50:])
