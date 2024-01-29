@@ -184,3 +184,40 @@
 2024-01-29 17:20:11,949 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: stop_status
 2024-01-29 17:20:11,950 DEBUG   SenderThread:21212 [sender.py:send_request():409] send_request: stop_status
 2024-01-29 17:20:13,096 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: status_report
+2024-01-29 17:20:17,872 INFO    Thread-16 :21212 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_171725-dvu850t7\files\output.log
+2024-01-29 17:20:18,290 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: status_report
+2024-01-29 17:20:23,329 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: status_report
+2024-01-29 17:20:26,848 DEBUG   SenderThread:21212 [sender.py:send():382] send: stats
+2024-01-29 17:20:26,941 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: internal_messages
+2024-01-29 17:20:26,956 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: stop_status
+2024-01-29 17:20:26,956 DEBUG   SenderThread:21212 [sender.py:send_request():409] send_request: stop_status
+2024-01-29 17:20:28,233 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-29 17:20:28,233 DEBUG   SenderThread:21212 [sender.py:send():382] send: history
+2024-01-29 17:20:28,233 DEBUG   SenderThread:21212 [sender.py:send_request():409] send_request: summary_record
+2024-01-29 17:20:28,234 INFO    SenderThread:21212 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-29 17:20:28,864 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: status_report
+2024-01-29 17:20:28,957 INFO    Thread-16 :21212 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_171725-dvu850t7\files\wandb-summary.json
+2024-01-29 17:20:29,964 INFO    Thread-16 :21212 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_171725-dvu850t7\files\output.log
+2024-01-29 17:20:33,901 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: status_report
+2024-01-29 17:20:38,940 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: status_report
+2024-01-29 17:20:41,948 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: internal_messages
+2024-01-29 17:20:41,978 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: stop_status
+2024-01-29 17:20:41,979 DEBUG   SenderThread:21212 [sender.py:send_request():409] send_request: stop_status
+2024-01-29 17:20:44,072 INFO    Thread-16 :21212 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_171725-dvu850t7\files\output.log
+2024-01-29 17:20:44,321 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: status_report
+2024-01-29 17:20:45,881 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-29 17:20:45,881 DEBUG   SenderThread:21212 [sender.py:send():382] send: history
+2024-01-29 17:20:45,882 DEBUG   SenderThread:21212 [sender.py:send_request():409] send_request: summary_record
+2024-01-29 17:20:45,882 INFO    SenderThread:21212 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-29 17:20:46,087 INFO    Thread-16 :21212 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_171725-dvu850t7\files\wandb-summary.json
+2024-01-29 17:20:46,531 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-29 17:20:46,532 DEBUG   SenderThread:21212 [sender.py:send():382] send: history
+2024-01-29 17:20:46,532 DEBUG   SenderThread:21212 [sender.py:send_request():409] send_request: summary_record
+2024-01-29 17:20:46,533 INFO    SenderThread:21212 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-29 17:20:47,094 INFO    Thread-16 :21212 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_171725-dvu850t7\files\wandb-summary.json
+2024-01-29 17:20:48,568 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: partial_history
+2024-01-29 17:20:48,568 DEBUG   SenderThread:21212 [sender.py:send():382] send: history
+2024-01-29 17:20:48,569 DEBUG   SenderThread:21212 [sender.py:send_request():409] send_request: summary_record
+2024-01-29 17:20:48,569 INFO    SenderThread:21212 [sender.py:_save_file():1403] saving file wandb-summary.json with policy end
+2024-01-29 17:20:49,110 INFO    Thread-16 :21212 [dir_watcher.py:_on_file_modified():288] file/dir modified: C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\wandb\run-20240129_171725-dvu850t7\files\wandb-summary.json
+2024-01-29 17:20:49,574 DEBUG   HandlerThread:21212 [handler.py:handle_request():146] handle_request: status_report

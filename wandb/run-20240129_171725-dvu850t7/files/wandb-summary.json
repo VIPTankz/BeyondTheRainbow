@@ -1,1 +1,1 @@
-{"train_scores": 1000.0, "steps": 16708, "episodes": 13, "walltime": 155.15420293807983, "_timestamp": 1706548802.0289185, "_runtime": 156.3430244922638, "_step": 12}
+{"train_scores": 4000.0, "steps": 21088, "episodes": 17, "walltime": 201.69352746009827, "_timestamp": 1706548848.5677428, "_runtime": 202.88184881210327, "_step": 16}

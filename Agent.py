@@ -46,7 +46,7 @@ class Agent():
 
         # IMPORTANT params, check these
         self.lr = 5e-5 #5e-5  # 0.0001 for sample efficient version
-        self.min_sampling_size = 2000
+        self.min_sampling_size = 80000
         self.n = 3
         self.gamma = 0.99
         self.batch_size = 16
