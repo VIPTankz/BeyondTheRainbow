@@ -9,7 +9,8 @@ import wandb
 
 def make_env(envs_create):
     return gym.vector.AsyncVectorEnv([lambda: gym.wrappers.FrameStack(
-        gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(envs_create)])
+        gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(envs_create)],
+                                     context="spawn")
 
 
 if __name__ == '__main__':
