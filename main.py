@@ -5,7 +5,7 @@ from copy import deepcopy
 import sys
 import torch
 import gymnasium as gym
-
+import wandb
 
 def make_env(envs_create):
     return gym.vector.AsyncVectorEnv([lambda: gym.wrappers.FrameStack(
@@ -21,111 +21,152 @@ if __name__ == '__main__':
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
 
-    num_envs = 1
-    n_steps = 3000 #50000000
-    gameset = ["UpNDown"]
+    num_envs = 4
+    n_steps = 100000 #50000000
 
-    print("Currently Playing Game(s): " + str(gameset))
+    gameset = ["BattleZone", "NameThisGame", "Phoenix", "DoubleDunk", "Qbert"]
 
-    gpu = sys.argv[1]
+    game_num = int(sys.argv[1])
+
+    game = gameset[game_num]
+
+    num_eval_episodes = 5
+    eval_every = 4000
+    next_eval = eval_every
+
+    print("Currently Playing Game: " + str(game))
+
+    gpu = sys.argv[2]
     device = torch.device('cuda:' + gpu if torch.cuda.is_available() else 'cpu')
     print("Device: " + str(device))
 
-    for game in gameset:
+    env = make_env(num_envs)
 
-        # gym version 0.25.2
-        # ie pre 5 arg step
+    print(env.observation_space)
+    print(env.action_space[0])
 
-        env = make_env(num_envs)
+    agent = Agent(n_actions=env.action_space[0].n, input_dims=[4, 84, 84], device=device, num_envs=num_envs,
+                  agent_name=agent_name, total_frames=n_steps)
 
-        print(env.observation_space)
-        print(env.action_space[0])
 
-        agent = Agent(n_actions=env.action_space[0].n, input_dims=[4, 84, 84], device=device, num_envs=num_envs,
-                      agent_name=agent_name, total_frames=n_steps)
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project="BeyondTheRainbow",
 
-        scores_temp = []
-        steps = 0
-        episodes = 0
-        start = time.time()
+        # track hyperparameters and run metadata
+        config={
+            "agent_name": agent_name,
+            "game": game,
+            "steps": n_steps,
+            "num_envs": num_envs,
+            "batch_size": agent.batch_size,
+            "IQN": agent.iqn,
+            "munchausen": agent.munchausen,
+            "impala": agent.impala,
+            "model_size": agent.model_size,
+            "noisy": agent.noisy,
+            "per_alpha": agent.per_alpha,
+            "discount": agent.gamma,
+            "maxpool": agent.maxpool,
+            "stabiliser": agent.stabiliser,
+            "target_replace": agent.replace_target_cnt,
+            "ema_tau": agent.soft_update_tau,
+            "tr_alpha": agent.tr_alpha,
+            "tr_period": agent.tr_period,
+            "loss": agent.loss_type
+        }
+    )
 
-        scores_count = [0 for i in range(num_envs)]
-        scores = []
-        done = False
-        observation, info = env.reset()
+    scores_temp = []
+    steps = 0
+    episodes = 0
+    start = time.time()
 
-        while steps < n_steps:
-            steps += num_envs
+    scores_count = [0 for i in range(num_envs)]
+    scores = []
+    done = False
+    observation, info = env.reset()
 
-            action = agent.choose_action(observation)  # this takes and return batches
+    while steps < n_steps:
+        steps += num_envs
 
-            env.step_async(action)
-            # need to sort out new API
+        action = agent.choose_action(observation)  # this takes and return batches
 
-            # this is placed here so learning takes place while step is happening
-            agent.learn()
+        env.step_async(action)
 
-            observation_, reward, done_, trun_, info = env.step_wait()
+        # this is placed here so learning takes place while step is happening
+        agent.learn()
 
-            #TRUNCATATION NOT IMPLEMENTED
-            done_ = np.logical_or(done_, trun_)
+        observation_, reward, done_, trun_, info = env.step_wait()
 
-            for i in range(num_envs):
-                scores_count[i] += reward[i]
+        #TRUNCATATION NOT IMPLEMENTED
+        done_ = np.logical_or(done_, trun_)
 
-                if done_[i]:
-                    scores.append([scores_count[i], steps])
-                    scores_temp.append(scores_count[i])
-                    scores_count[i] = 0
+        for i in range(num_envs):
+            scores_count[i] += reward[i]
 
-            reward = np.clip(reward, -1., 1.)
+            if done_[i]:
+                episodes += 1
+                scores.append([scores_count[i], steps])
+                scores_temp.append(scores_count[i])
+                wandb.log({"train_scores": scores_count[i], "steps": steps, "episodes": episodes,
+                           "walltime": time.time() - start})
 
-            for stream in range(num_envs):
-                agent.store_transition(observation[stream], action[stream], reward[stream], done_[stream], stream=stream)
+                scores_count[i] = 0
 
-            observation = deepcopy(observation_)
+        reward = np.clip(reward, -1., 1.)
 
-            if steps % 1200 == 0:
+        for stream in range(num_envs):
+            agent.store_transition(observation[stream], action[stream], reward[stream], done_[stream], stream=stream)
 
-                avg_score = np.mean(scores_temp[-50:])
+        observation = deepcopy(observation_)
 
-                if episodes % 1 == 0:
-                    print('{} {} avg score {:.2f} total_steps {:.0f} fps {:.2f}'
-                          .format(agent_name, game, avg_score, steps, steps / (time.time() - start)), flush=True)
+        if steps % 1200 == 0 and len(scores) > 0:
 
-        fname = agent_name + game + "Experiment.npy"
-        np.save(fname, np.array(scores))
+            avg_score = np.mean(scores_temp[-50:])
 
-        env = make_env(1)
+            if episodes % 1 == 0:
+                print('{} {} avg score {:.2f} total_steps {:.0f} fps {:.2f}'
+                      .format(agent_name, game, avg_score, steps, steps / (time.time() - start)), flush=True)
 
-        agent.set_eval_mode()
-        evals = []
-        steps = 0
-        eval_episodes = 0
-        while eval_episodes < 100:
-            done = False
-            observation, _ = env.reset()
-            observation = observation
-            score = 0
-            while not done:
-                steps += 1
-                action = agent.choose_action(observation)
+        # Evaluation
+        if steps >= next_eval or steps > n_steps:
 
-                observation_, reward, done_, trun_, info = env.step(action)
-                observation_ = observation_
+            fname = agent_name + game + "Experiment.npy"
+            np.save(fname, np.array(scores))
 
-                # TRUNCATATION NOT IMPLEMENTED
-                done = np.logical_or(done_, trun_)
-                reward = reward[0]
+            eval_env = make_env(1)
 
-                score += reward
-                observation = observation_
+            agent.set_eval_mode()
+            evals = []
+            eval_episodes = 0
+            while eval_episodes < num_eval_episodes:
+                eval_done = np.array([False])
+                eval_observation, _ = eval_env.reset()
+                eval_score = 0
+                while not eval_done.any():
+                    eval_action = agent.choose_action(observation)
 
-            evals.append(score)
-            print("Evaluation Score: " + str(score))
-            eval_episodes += 1
-            print("Average:")
-            print(np.mean(np.array(evals)))
+                    eval_observation_, eval_reward, eval_done_, eval_trun_, eval_info = eval_env.step(eval_action)
 
-        fname = agent_name + game + "Evaluation.npy"
-        np.save(fname, np.array(evals))
+                    # TRUNCATATION NOT IMPLEMENTED
+                    eval_done = np.logical_or(eval_done_, eval_trun_)
+                    eval_reward = eval_reward[0]
+
+                    eval_score += eval_reward
+                    eval_observation = eval_observation_
+
+                evals.append(eval_score)
+                wandb.log({"eval_scores": eval_score})
+                print("Evaluation Score: " + str(eval_score))
+                eval_episodes += 1
+                print("Average:")
+                print(np.mean(np.array(evals)))
+
+            fname = agent_name + game + "Evaluation" + str(next_eval) + ".npy"
+            np.save(fname, np.array(evals))
+            next_eval += eval_every
+            agent.set_train_mode()
+
+
+    wandb.finish()

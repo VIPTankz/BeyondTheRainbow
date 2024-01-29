@@ -1,0 +1,1 @@
+{"train_scores": 8000.0, "steps": 99504, "episodes": 75, "walltime": 1896.304485321045, "_timestamp": 1706522693.6576755, "_runtime": 1941.7674264907837, "_step": 199, "eval_scores": 7000.0, "_wandb": {"runtime": 1941}}

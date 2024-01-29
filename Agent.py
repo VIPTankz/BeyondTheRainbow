@@ -86,11 +86,28 @@ class Agent():
         if not self.loading_checkpoint:
             self.per_beta = 0.4
 
-        self.soft_updates = False
-        if self.soft_updates:
-            self.soft_update_tau = 0.005 #0.001 for non-sample-eff
+        # target_net, ema, trust_region
+        self.stabiliser = "target_net"
+
+        if self.stabiliser == "ema":
+            self.soft_updates = True
         else:
-            self.replace_target_cnt = 8000  # 32k - # This also needs to be divided by replay_period
+            self.soft_updates = False
+
+        # NOT IMPLEMENTED
+        if self.stabiliser == "trust_regions":
+            self.trust_regions = True
+        else:
+            self.trust_regions = False
+
+        self.soft_update_tau = 0.001  # 0.001 for non-sample-eff
+        self.replace_target_cnt = 8000  # 32k - # This also needs to be divided by replay_period
+
+        # NOT IMPLEMENTED
+        self.tr_alpha = 1
+        self.tr_period = 1500
+
+        self.loss_type = "huber"  # NOT IMPLEMENTED
 
         if self.iqn:
             self.num_tau = 8
@@ -170,6 +187,11 @@ class Agent():
         self.net.eval()
         self.tgt_net.eval()
         self.eval_mode = True
+
+    def set_train_mode(self):
+        self.net.train()
+        self.tgt_net.train()
+        self.eval_mode = False
 
     def choose_action(self, observation):
         with T.no_grad():
