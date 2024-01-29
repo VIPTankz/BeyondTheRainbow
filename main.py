@@ -16,23 +16,22 @@ if __name__ == '__main__':
 
     from Agent import Agent
 
-    agent_name = "BTR_Trial"
+    agent_name = "BTR_og"
 
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
 
     num_envs = 4
-    n_steps = 100000 #50000000
+    n_steps = 50000000
+    num_eval_episodes = 100
+    eval_every = 1000000
+    next_eval = eval_every
 
     gameset = ["BattleZone", "NameThisGame", "Phoenix", "DoubleDunk", "Qbert"]
 
     game_num = int(sys.argv[1])
 
     game = gameset[game_num]
-
-    num_eval_episodes = 5
-    eval_every = 4000
-    next_eval = eval_every
 
     print("Currently Playing Game: " + str(game))
 

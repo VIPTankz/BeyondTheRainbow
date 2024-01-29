@@ -1,1 +1,2 @@
 3.11.0
+pytorch must be installed seperately for linux/windows
