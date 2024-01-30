@@ -23,7 +23,7 @@ if __name__ == '__main__':
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
 
-    num_envs = 16
+    num_envs = 4
     n_steps = 50000000
     num_eval_episodes = 100
     eval_every = 1000000
@@ -128,63 +128,63 @@ if __name__ == '__main__':
             if done_[stream]:
                 observation[stream] = deepcopy(info["final_observation"][stream])
 
-    if steps % 1200 == 0 and len(scores) > 0:
+        if steps % 1200 == 0 and len(scores) > 0:
 
-        avg_score = np.mean(scores_temp[-50:])
+            avg_score = np.mean(scores_temp[-50:])
 
-        if episodes % 1 == 0:
-            print('{} {} avg score {:.2f} total_steps {:.0f} fps {:.2f}'
-                  .format(agent_name, game, avg_score, steps, (last_steps - steps) / (time.time() - last_time)), flush=True)
-            last_steps = steps
-            last_time = time.time()
+            if episodes % 1 == 0:
+                print('{} {} avg score {:.2f} total_steps {:.0f} fps {:.2f}'
+                      .format(agent_name, game, avg_score, steps, (steps - last_steps) / (time.time() - last_time)), flush=True)
+                last_steps = steps
+                last_time = time.time()
 
-    # Evaluation
-    if steps >= next_eval or steps >= n_steps:
+        # Evaluation
+        if steps >= next_eval or steps >= n_steps:
 
-        print("Evaluating")
+            print("Evaluating")
 
-        fname = agent_name + game + "Experiment.npy"
-        np.save(fname, np.array(scores))
+            fname = agent_name + game + "Experiment.npy"
+            np.save(fname, np.array(scores))
 
-        eval_env = make_env(num_envs)
+            eval_env = make_env(num_envs)
 
-        agent.set_eval_mode()
-        evals = []
-        eval_episodes = 0
-        eval_scores = np.array([0 for i in range(num_envs)])
-        eval_observation, eval_info = eval_env.reset()
+            agent.set_eval_mode()
+            evals = []
+            eval_episodes = 0
+            eval_scores = np.array([0 for i in range(num_envs)])
+            eval_observation, eval_info = eval_env.reset()
 
-        while eval_episodes < num_eval_episodes:
+            while eval_episodes < num_eval_episodes:
 
-            eval_action = agent.choose_action(eval_observation)  # this takes and return batches
+                eval_action = agent.choose_action(eval_observation)  # this takes and return batches
 
-            eval_observation_, eval_reward, eval_done_, eval_trun_, eval_info = eval_env.step(eval_action)
+                eval_observation_, eval_reward, eval_done_, eval_trun_, eval_info = eval_env.step(eval_action)
 
-            # TRUNCATATION NOT IMPLEMENTED
-            eval_done_ = np.logical_or(eval_done_, eval_trun_)
+                # TRUNCATATION NOT IMPLEMENTED
+                eval_done_ = np.logical_or(eval_done_, eval_trun_)
 
-            for i in range(num_envs):
-                eval_scores[i] += eval_reward[i]
+                for i in range(num_envs):
+                    eval_scores[i] += eval_reward[i]
 
-                if eval_done_[i]:
-                    eval_episodes += 1
-                    wandb.log({"eval_scores": eval_scores[i]})
-                    evals.append(eval_scores[i])
-                    print("Eval Score: " + str(eval_scores[i]))
+                    if eval_done_[i]:
+                        eval_episodes += 1
+                        wandb.log({"eval_scores": eval_scores[i]})
+                        evals.append(eval_scores[i])
+                        print("Eval Score: " + str(eval_scores[i]))
 
-                    eval_scores[i] = 0
+                        eval_scores[i] = 0
 
-            eval_observation = deepcopy(eval_observation_)
+                eval_observation = deepcopy(eval_observation_)
 
-            for stream in range(num_envs):
-                if eval_done_[stream]:
-                    eval_observation[stream] = deepcopy(eval_info["final_observation"][stream])
+                for stream in range(num_envs):
+                    if eval_done_[stream]:
+                        eval_observation[stream] = deepcopy(eval_info["final_observation"][stream])
 
 
-        fname = agent_name + game + "Evaluation" + str(next_eval) + ".npy"
-        np.save(fname, np.array(evals))
-        next_eval += eval_every
-        agent.set_train_mode()
+            fname = agent_name + game + "Evaluation" + str(next_eval) + ".npy"
+            np.save(fname, np.array(evals))
+            next_eval += eval_every
+            agent.set_train_mode()
 
 
 wandb.finish()
