@@ -23,7 +23,7 @@ if __name__ == '__main__':
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
 
-    num_envs = 4
+    num_envs = 16
     n_steps = 50000000
     num_eval_episodes = 100
     eval_every = 1000000
