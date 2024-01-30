@@ -32,12 +32,13 @@ class EpsilonGreedy():
             return np.random.choice(self.action_space)
 
 class Agent():
-    def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames):
+    def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
         self.device = device
         self.agent_name = agent_name
+        self.testing = testing
 
         self.action_space = [i for i in range(self.n_actions)]
         self.learn_step_counter = 0
@@ -46,10 +47,13 @@ class Agent():
 
         # IMPORTANT params, check these
         self.lr = 5e-5 #5e-5  # 0.0001 for sample efficient version
-        self.min_sampling_size = 200000
+        if self.testing:
+            self.min_sampling_size = 2000
+        else:
+            self.min_sampling_size = 200000
         self.n = 3
         self.gamma = 0.99
-        self.batch_size = 32
+        self.batch_size = 64
 
         self.replay_ratio = 2
         self.model_size = 4  # Scaling of IMPALA network
@@ -59,6 +63,8 @@ class Agent():
         self.spectral_norm = False  # this produces nans for some reason!
 
         self.per_splits = 8
+        if self.per_splits > num_envs:
+            self.per_splits = num_envs
 
         self.impala = True #non impala only implemented for iqn
 
@@ -279,16 +285,18 @@ class Agent():
                 idxs, states, actions, rewards, next_states, dones, weights = self.memories[mems[0]].sample(
                     self.batch_size // self.per_splits)
 
-                idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[mems[1]].sample(
-                    self.batch_size // self.per_splits)
+                for i in range(self.per_splits - 1):
 
-                idxs = np.concatenate((idxs, idxsN))
-                states = torch.cat((states, statesN))
-                actions = torch.cat((actions, actionsN))
-                rewards = torch.cat((rewards, rewardsN))
-                next_states = torch.cat((next_states, next_statesN))
-                dones = torch.cat((dones, donesN))
-                weights = torch.cat((weights, weightsN))
+                    idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[mems[i + 1]].sample(
+                        self.batch_size // self.per_splits)
+
+                    idxs = np.concatenate((idxs, idxsN))
+                    states = torch.cat((states, statesN))
+                    actions = torch.cat((actions, actionsN))
+                    rewards = torch.cat((rewards, rewardsN))
+                    next_states = torch.cat((next_states, next_statesN))
+                    dones = torch.cat((dones, donesN))
+                    weights = torch.cat((weights, weightsN))
 
             else:
                 mem = np.random.randint(0, len(self.memories))
@@ -302,6 +310,7 @@ class Agent():
             print("Infinity Error?")
             raise Exception("stop")
             return
+
 
         states = states.clone().detach().to(self.net.device)
         rewards = rewards.clone().detach().to(self.net.device)
@@ -413,7 +422,7 @@ class Agent():
             # calculate log-pi
             logsum = torch.logsumexp(
                 (q_t_n - q_t_n.max(1)[0].unsqueeze(-1)) / self.entropy_tau, 1).unsqueeze(-1)  # logsum trick
-            #assert logsum.shape == (self.batch_size, 1), "log pi next has wrong shape: {}".format(logsum.shape)
+            assert logsum.shape == (self.batch_size, 1), "log pi next has wrong shape: {}".format(logsum.shape)
             tau_log_pi_next = (q_t_n - q_t_n.max(1)[0].unsqueeze(-1) - self.entropy_tau * logsum).unsqueeze(1)
 
             pi_target = F.softmax(q_t_n / self.entropy_tau, dim=1).unsqueeze(1)
@@ -427,13 +436,13 @@ class Agent():
             tau_log_pik = q_k_target - v_k_target - self.entropy_tau * torch.logsumexp(
                 (q_k_target - v_k_target) / self.entropy_tau, 1).unsqueeze(-1)
 
-            #assert tau_log_pik.shape == (self.batch_size, self.n_actions), "shape instead is {}".format(
-                #tau_log_pik.shape)
+            assert tau_log_pik.shape == (self.batch_size, self.n_actions), "shape instead is {}".format(
+                tau_log_pik.shape)
             munchausen_addon = tau_log_pik.gather(1, actions)
 
             # calc munchausen reward:
             munchausen_reward = (rewards + self.alpha * torch.clamp(munchausen_addon, min=self.lo, max=0)).unsqueeze(-1)
-            #assert munchausen_reward.shape == (self.batch_size, 1, 1)
+            assert munchausen_reward.shape == (self.batch_size, 1, 1)
             # Compute Q targets for current states
             Q_targets = munchausen_reward + Q_target
             # Get expected Q values from local model

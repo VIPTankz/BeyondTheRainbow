@@ -22,8 +22,14 @@ if __name__ == '__main__':
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
 
-    num_envs = 32
-    n_steps = 10000000
+    testing = False
+
+    if testing:
+        num_envs = 4
+    else:
+        num_envs = 64
+
+    n_steps = 50000000
     num_eval_episodes = 100
     eval_every = 1000000
     next_eval = eval_every
@@ -46,7 +52,7 @@ if __name__ == '__main__':
     print(env.action_space[0])
 
     agent = Agent(n_actions=env.action_space[0].n, input_dims=[4, 84, 84], device=device, num_envs=num_envs,
-                  agent_name=agent_name, total_frames=n_steps)
+                  agent_name=agent_name, total_frames=n_steps, testing=testing)
 
 
     wandb.init(
