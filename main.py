@@ -18,12 +18,12 @@ if __name__ == '__main__':
     from Agent import Agent
 
 
-    agent_name = "BTR_og"
+    agent_name = "BTR_32env_rr2_bs32"
 
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
 
-    num_envs = 16
+    num_envs = 32
     n_steps = 50000000
     num_eval_episodes = 100
     eval_every = 1000000

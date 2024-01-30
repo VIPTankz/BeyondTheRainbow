@@ -51,7 +51,7 @@ class Agent():
         self.gamma = 0.99
         self.batch_size = 32
 
-        self.replay_ratio = 1
+        self.replay_ratio = 2
         self.model_size = 4  # Scaling of IMPALA network
 
         # do not use both spectral and noisy, they will interfere with each other
