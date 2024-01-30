@@ -46,7 +46,7 @@ class Agent():
 
         # IMPORTANT params, check these
         self.lr = 5e-5 #5e-5  # 0.0001 for sample efficient version
-        self.min_sampling_size = 80000
+        self.min_sampling_size = 200000
         self.n = 3
         self.gamma = 0.99
         self.batch_size = 32
@@ -58,7 +58,7 @@ class Agent():
         self.noisy = True
         self.spectral_norm = False  # this produces nans for some reason!
 
-        self.per_splits = 1
+        self.per_splits = 8
 
         self.impala = True #non impala only implemented for iqn
 

@@ -17,8 +17,7 @@ if __name__ == '__main__':
 
     from Agent import Agent
 
-
-    agent_name = "BTR_32env_rr2_bs32"
+    agent_name = "BTR_32env_rr2_bs32_persplit8"
 
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
