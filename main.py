@@ -23,7 +23,7 @@ if __name__ == '__main__':
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
 
-    num_envs = 8
+    num_envs = 16
     n_steps = 50000000
     num_eval_episodes = 100
     eval_every = 1000000
@@ -80,6 +80,8 @@ if __name__ == '__main__':
 
     scores_temp = []
     steps = 0
+    last_steps = 0
+    last_time = time.time()
     episodes = 0
     start = time.time()
 
@@ -132,41 +134,52 @@ if __name__ == '__main__':
 
         if episodes % 1 == 0:
             print('{} {} avg score {:.2f} total_steps {:.0f} fps {:.2f}'
-                  .format(agent_name, game, avg_score, steps, steps / (time.time() - start)), flush=True)
+                  .format(agent_name, game, avg_score, steps, (last_steps - steps) / (time.time() - last_time)), flush=True)
+            last_steps = steps
+            last_time = time.time()
 
     # Evaluation
-    if steps >= next_eval or steps > n_steps:
+    if steps >= next_eval or steps >= n_steps:
+
+        print("Evaluating")
 
         fname = agent_name + game + "Experiment.npy"
         np.save(fname, np.array(scores))
 
-        eval_env = make_env(1)
+        eval_env = make_env(num_envs)
 
         agent.set_eval_mode()
         evals = []
         eval_episodes = 0
+        eval_scores = np.array([0 for i in range(num_envs)])
+        eval_observation, eval_info = eval_env.reset()
+
         while eval_episodes < num_eval_episodes:
-            eval_done = np.array([False])
-            eval_observation, _ = eval_env.reset()
-            eval_score = 0
-            while not eval_done.any():
-                eval_action = agent.choose_action(observation)
 
-                eval_observation_, eval_reward, eval_done_, eval_trun_, eval_info = eval_env.step(eval_action)
+            eval_action = agent.choose_action(eval_observation)  # this takes and return batches
 
-                # TRUNCATATION NOT IMPLEMENTED
-                eval_done = np.logical_or(eval_done_, eval_trun_)
-                eval_reward = eval_reward[0]
+            eval_observation_, eval_reward, eval_done_, eval_trun_, eval_info = eval_env.step(eval_action)
 
-                eval_score += eval_reward
-                eval_observation = eval_observation_
+            # TRUNCATATION NOT IMPLEMENTED
+            eval_done_ = np.logical_or(eval_done_, eval_trun_)
 
-            evals.append(eval_score)
-            wandb.log({"eval_scores": eval_score})
-            print("Evaluation Score: " + str(eval_score))
-            eval_episodes += 1
-            print("Average:")
-            print(np.mean(np.array(evals)))
+            for i in range(num_envs):
+                eval_scores[i] += eval_reward[i]
+
+                if eval_done_[i]:
+                    eval_episodes += 1
+                    wandb.log({"eval_scores": eval_scores[i]})
+                    evals.append(eval_scores[i])
+                    print("Eval Score: " + str(eval_scores[i]))
+
+                    eval_scores[i] = 0
+
+            eval_observation = deepcopy(eval_observation_)
+
+            for stream in range(num_envs):
+                if eval_done_[stream]:
+                    eval_observation[stream] = deepcopy(eval_info["final_observation"][stream])
+
 
         fname = agent_name + game + "Evaluation" + str(next_eval) + ".npy"
         np.save(fname, np.array(evals))

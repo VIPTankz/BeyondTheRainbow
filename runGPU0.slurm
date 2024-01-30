@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --ntasks=4
+#SBATCH --ntasks=8
 #SBATCH --mem=96000
 #SBATCH -p batch
 #SBATCH --job-name=BTR_Atari

@@ -49,7 +49,7 @@ class Agent():
         self.min_sampling_size = 80000
         self.n = 3
         self.gamma = 0.99
-        self.batch_size = 16
+        self.batch_size = 32
 
         self.replay_ratio = 1
         self.model_size = 4  # Scaling of IMPALA network
@@ -58,7 +58,7 @@ class Agent():
         self.noisy = True
         self.spectral_norm = False  # this produces nans for some reason!
 
-        self.per_splits = 2
+        self.per_splits = 1
 
         self.impala = True #non impala only implemented for iqn
 
@@ -214,9 +214,7 @@ class Agent():
                     if np.random.random() > 0.01:
                         x[i] = np.random.choice(self.action_space)
 
-
             return x
-
 
     def store_transition(self, state, action, reward, done, stream, prio=None):
         if prio is None:
@@ -275,7 +273,7 @@ class Agent():
             self.soft_update()
 
         try:
-            if self.num_envs > 1:
+            if self.num_envs > 1 and self.per_splits > 1:
                 mems = np.random.choice(self.num_envs, self.per_splits, replace=False)
 
                 idxs, states, actions, rewards, next_states, dones, weights = self.memories[mems[0]].sample(
@@ -293,7 +291,9 @@ class Agent():
                 weights = torch.cat((weights, weightsN))
 
             else:
-                idxs, states, actions, rewards, next_states, dones, weights = self.memories[0].sample(
+                mem = np.random.randint(0, len(self.memories))
+
+                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mem].sample(
                     self.batch_size)
 
         except Exception as e:
@@ -463,13 +463,13 @@ class Agent():
         if self.grad_steps % 10000 == 0:
             print("Completed " + str(self.grad_steps) + " gradient steps")
 
-        if self.num_envs > 1:
+        if self.num_envs > 1 and self.per_splits > 1:
             idxs = np.split(idxs, self.per_splits)
             loss_v = torch.split(loss_v, self.batch_size // self.per_splits)
             for i in range(self.per_splits):
                 self.memories[mems[i]].update_priorities(idxs[i], loss_v[i].cpu().detach().numpy())
         else:
-            self.memories[0].update_priorities(idxs, loss_v.cpu().detach().numpy())
+            self.memories[mem].update_priorities(idxs, loss_v.cpu().detach().numpy())
 
 
 def calculate_huber_loss(td_errors, k=1.0):
