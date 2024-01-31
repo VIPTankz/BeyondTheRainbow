@@ -22,7 +22,7 @@ if __name__ == '__main__':
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
 
-    testing = True
+    testing = False
 
     if testing:
         num_envs = 4
