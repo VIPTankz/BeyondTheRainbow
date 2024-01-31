@@ -22,18 +22,21 @@ if __name__ == '__main__':
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
 
-    testing = False
+    testing = True
 
     if testing:
-        num_envs = 1
+        num_envs = 4
         eval_envs = 2
+        eval_every = 3000
+        num_eval_episodes = 3
+        n_steps = 100000
     else:
         num_envs = 32
         eval_envs = 8
+        n_steps = 50000000
+        num_eval_episodes = 100
+        eval_every = 1000000
 
-    n_steps = 50000000
-    num_eval_episodes = 100
-    eval_every = 1000000
     next_eval = eval_every
 
     gameset = ["BattleZone", "NameThisGame", "Phoenix", "DoubleDunk", "Qbert"]
@@ -91,6 +94,8 @@ if __name__ == '__main__':
     last_time = time.time()
     episodes = 0
     start = time.time()
+
+    evals_total = []
 
     scores_count = [0 for i in range(num_envs)]
     scores = []
@@ -155,6 +160,7 @@ if __name__ == '__main__':
 
             eval_env = make_env(eval_envs)
 
+
             agent.set_eval_mode()
             evals = []
             eval_episodes = 0
@@ -186,9 +192,9 @@ if __name__ == '__main__':
                     if eval_done_[stream]:
                         eval_observation[stream] = eval_info["final_observation"][stream]
 
-
-            fname = agent_name + game + "Evaluation" + str(next_eval) + ".npy"
-            np.save(fname, np.array(evals))
+            evals_total.append(evals)
+            fname = agent_name + game + "Evaluation.npy"
+            np.save(fname, np.array(evals_total))
             next_eval += eval_every
             agent.set_train_mode()
 

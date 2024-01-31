@@ -319,7 +319,7 @@ class Agent():
         states_ = next_states.clone().detach().to(self.net.device)
 
         #use this code to check your states are correct
-
+        """
         plt.imshow(states[0][0].unsqueeze(dim=0).cpu().permute(1, 2, 0))
         plt.show()
 
@@ -328,6 +328,7 @@ class Agent():
 
         plt.imshow(states[2][0].unsqueeze(dim=0).cpu().permute(1, 2, 0))
         plt.show()
+        """
 
 
         with torch.no_grad():
