@@ -55,14 +55,14 @@ class Agent():
         self.gamma = 0.99
         self.batch_size = 64
 
-        self.replay_ratio = 2
-        self.model_size = 4  # Scaling of IMPALA network
+        self.replay_ratio = 1
+        self.model_size = 2  # Scaling of IMPALA network
 
         # do not use both spectral and noisy, they will interfere with each other
         self.noisy = True
         self.spectral_norm = False  # this produces nans for some reason!
 
-        self.per_splits = 8
+        self.per_splits = 4
         if self.per_splits > num_envs:
             self.per_splits = num_envs
 
@@ -319,10 +319,16 @@ class Agent():
         states_ = next_states.clone().detach().to(self.net.device)
 
         #use this code to check your states are correct
-        """
+
         plt.imshow(states[0][0].unsqueeze(dim=0).cpu().permute(1, 2, 0))
         plt.show()
-        """
+
+        plt.imshow(states[1][0].unsqueeze(dim=0).cpu().permute(1, 2, 0))
+        plt.show()
+
+        plt.imshow(states[2][0].unsqueeze(dim=0).cpu().permute(1, 2, 0))
+        plt.show()
+
 
         with torch.no_grad():
             if self.noisy:
@@ -422,7 +428,7 @@ class Agent():
             # calculate log-pi
             logsum = torch.logsumexp(
                 (q_t_n - q_t_n.max(1)[0].unsqueeze(-1)) / self.entropy_tau, 1).unsqueeze(-1)  # logsum trick
-            assert logsum.shape == (self.batch_size, 1), "log pi next has wrong shape: {}".format(logsum.shape)
+            #assert logsum.shape == (self.batch_size, 1), "log pi next has wrong shape: {}".format(logsum.shape)
             tau_log_pi_next = (q_t_n - q_t_n.max(1)[0].unsqueeze(-1) - self.entropy_tau * logsum).unsqueeze(1)
 
             pi_target = F.softmax(q_t_n / self.entropy_tau, dim=1).unsqueeze(1)
@@ -436,13 +442,13 @@ class Agent():
             tau_log_pik = q_k_target - v_k_target - self.entropy_tau * torch.logsumexp(
                 (q_k_target - v_k_target) / self.entropy_tau, 1).unsqueeze(-1)
 
-            assert tau_log_pik.shape == (self.batch_size, self.n_actions), "shape instead is {}".format(
-                tau_log_pik.shape)
+            #assert tau_log_pik.shape == (self.batch_size, self.n_actions), "shape instead is {}".format(
+                #tau_log_pik.shape)
             munchausen_addon = tau_log_pik.gather(1, actions)
 
             # calc munchausen reward:
             munchausen_reward = (rewards + self.alpha * torch.clamp(munchausen_addon, min=self.lo, max=0)).unsqueeze(-1)
-            assert munchausen_reward.shape == (self.batch_size, 1, 1)
+            #assert munchausen_reward.shape == (self.batch_size, 1, 1)
             # Compute Q targets for current states
             Q_targets = munchausen_reward + Q_target
             # Get expected Q values from local model

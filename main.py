@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     from Agent import Agent
 
-    agent_name = "BTR_V100_32env_rr2_bs32_persplit8"
+    agent_name = "BTR_V100_32env_rr1_bs64_persplit4"
 
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
@@ -25,9 +25,11 @@ if __name__ == '__main__':
     testing = False
 
     if testing:
-        num_envs = 4
+        num_envs = 1
+        eval_envs = 2
     else:
-        num_envs = 64
+        num_envs = 32
+        eval_envs = 8
 
     n_steps = 50000000
     num_eval_episodes = 100
@@ -127,11 +129,11 @@ if __name__ == '__main__':
         for stream in range(num_envs):
             agent.store_transition(observation[stream], action[stream], reward[stream], done_[stream], stream=stream)
 
-        observation = deepcopy(observation_)
+        observation = observation_
 
         for stream in range(num_envs):
             if done_[stream]:
-                observation[stream] = deepcopy(info["final_observation"][stream])
+                observation[stream] = info["final_observation"][stream]
 
         if steps % 1200 == 0 and len(scores) > 0:
 
@@ -151,12 +153,12 @@ if __name__ == '__main__':
             fname = agent_name + game + "Experiment.npy"
             np.save(fname, np.array(scores))
 
-            eval_env = make_env(num_envs)
+            eval_env = make_env(eval_envs)
 
             agent.set_eval_mode()
             evals = []
             eval_episodes = 0
-            eval_scores = np.array([0 for i in range(num_envs)])
+            eval_scores = np.array([0 for i in range(eval_envs)])
             eval_observation, eval_info = eval_env.reset()
 
             while eval_episodes < num_eval_episodes:
@@ -168,22 +170,21 @@ if __name__ == '__main__':
                 # TRUNCATATION NOT IMPLEMENTED
                 eval_done_ = np.logical_or(eval_done_, eval_trun_)
 
-                for i in range(num_envs):
+                for i in range(eval_envs):
                     eval_scores[i] += eval_reward[i]
 
                     if eval_done_[i]:
                         eval_episodes += 1
                         wandb.log({"eval_scores": eval_scores[i]})
                         evals.append(eval_scores[i])
-                        print("Eval Score: " + str(eval_scores[i]))
 
                         eval_scores[i] = 0
 
-                eval_observation = deepcopy(eval_observation_)
+                eval_observation = eval_observation_
 
-                for stream in range(num_envs):
+                for stream in range(eval_envs):
                     if eval_done_[stream]:
-                        eval_observation[stream] = deepcopy(eval_info["final_observation"][stream])
+                        eval_observation[stream] = eval_info["final_observation"][stream]
 
 
             fname = agent_name + game + "Evaluation" + str(next_eval) + ".npy"
