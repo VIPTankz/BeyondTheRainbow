@@ -1,0 +1,56 @@
+{
+    "os": "Windows-10-10.0.19045-SP0",
+    "python": "3.11.0",
+    "heartbeatAt": "2024-01-31T17:27:39.126288",
+    "startedAt": "2024-01-31T17:27:38.878000",
+    "docker": null,
+    "cuda": null,
+    "args": [
+        "0",
+        "0"
+    ],
+    "state": "running",
+    "program": "C:\\Users\\TYLER\\Documents\\GitHub\\BeyondTheRainbow\\main.py",
+    "codePathLocal": "main.py",
+    "codePath": "main.py",
+    "git": {
+        "remote": "https://github.com/VIPTankz/BeyondTheRainbow.git",
+        "commit": "c378e7111f6e3c2a4234d6c947de3e7f065d3db8"
+    },
+    "email": "t.y.l.e.r.14@live.co.uk",
+    "root": "C:/Users/TYLER/Documents/GitHub/BeyondTheRainbow",
+    "host": "LAPTOP-0FL29BIK",
+    "username": "TYLER",
+    "executable": "C:\\Users\\TYLER\\AppData\\Local\\Programs\\Python\\Python311\\python.exe",
+    "cpu_count": 8,
+    "cpu_count_logical": 16,
+    "cpu_freq": {
+        "current": 3201.0,
+        "min": 0.0,
+        "max": 3201.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 3201.0,
+            "min": 0.0,
+            "max": 3201.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 952.7548789978027,
+            "used": 537.2102966308594
+        }
+    },
+    "gpu": "NVIDIA GeForce RTX 3080 Laptop GPU",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "NVIDIA GeForce RTX 3080 Laptop GPU",
+            "memory_total": 8589934592
+        }
+    ],
+    "memory": {
+        "total": 15.355525970458984
+    }
+}

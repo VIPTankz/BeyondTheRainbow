@@ -184,7 +184,7 @@ class Dueling(nn.Module):
         self.value_branch = value_branch
         self.advantage_branch = advantage_branch
 
-    #@torch.autocast('cuda')
+    @torch.autocast('cuda')
     def forward(self, x, advantages_only=False):
         x = self.flatten(x)
         advantages = self.advantage_branch(x)
@@ -312,14 +312,19 @@ class ImpalaCNNResidual(nn.Module):
         super().__init__()
 
         self.relu = nn.ReLU()
+
         self.conv_0 = norm_func(nn.Conv2d(in_channels=depth, out_channels=depth, kernel_size=3, stride=1, padding=1))
         self.conv_1 = norm_func(nn.Conv2d(in_channels=depth, out_channels=depth, kernel_size=3, stride=1, padding=1))
 
-    #@torch.autocast('cuda')
+    @torch.autocast('cuda')
     def forward(self, x):
+        #if x.abs().sum().item() != 0:
         x_ = self.conv_0(self.relu(x))
+        #if x_.abs().sum().item() == 0:
+        #raise Exception("0 tensor found within residual layer!")
         x_ = self.conv_1(self.relu(x_))
-        return x+x_
+        return x + x_
+
 
 class ImpalaCNNBlock(nn.Module):
     """
@@ -333,12 +338,27 @@ class ImpalaCNNBlock(nn.Module):
         self.residual_0 = ImpalaCNNResidual(depth_out, norm_func=norm_func)
         self.residual_1 = ImpalaCNNResidual(depth_out, norm_func=norm_func)
 
-    #@torch.autocast('cuda')
+    @torch.autocast('cuda')
     def forward(self, x):
+        #print("Conv Layer Block before")
+        #print(x.abs().sum().item())
+        #print("-------------------")
+        #print(x.type)
+        #print(self.conv)
+        #print(self.conv.dtype)
         x = self.conv(x)
+        #This bug still exists -- this sometimes outputs all 0s
+        # Bug is now FIXED (I HOPE, it still lives in my nightmares)
+        #turned out it was computation between float and cuda.float being dodgy
+
+        #raise Exception("Array of 0s!")
+        #print(x.abs().sum().item())
         x = self.max_pool(x)
+
         x = self.residual_0(x)
+
         x = self.residual_1(x)
+
         return x
 
 
@@ -601,20 +621,24 @@ class ImpalaCNNLargeIQN(nn.Module):
         self.n_cos = 64
         self.pis = torch.FloatTensor([np.pi * i for i in range(self.n_cos)]).view(1, 1, self.n_cos).to(device)
 
-        if spectral:
-            spectral_norm = 'all'
+        if noisy:
+            linear_layer = NoisyLinear
         else:
-            spectral_norm = 'none'
+            linear_layer = nn.Linear
 
         def identity(p): return p
 
-        norm_func = torch.nn.utils.parametrizations.spectral_norm if (spectral_norm == 'all') else identity
-        norm_func_last = torch.nn.utils.parametrizations.spectral_norm if (spectral_norm == 'last' or spectral_norm == 'all') else identity
+        if spectral:
+            #spectral_norm_kwargs = {"eps": 1e-8}
+            norm_func = torch.nn.utils.spectral_norm
+            #norm_func = partial(norm_func, **spectral_norm_kwargs)
+        else:
+            norm_func = identity
 
         self.conv = nn.Sequential(
-            ImpalaCNNBlock(in_depth, 16*model_size, norm_func=norm_func),
-            ImpalaCNNBlock(16*model_size, 32*model_size, norm_func=norm_func),
-            ImpalaCNNBlock(32*model_size, 32*model_size, norm_func=norm_func_last),
+            ImpalaCNNBlock(in_depth, 16*model_size, norm_func=identity),
+            ImpalaCNNBlock(16*model_size, 32*model_size, norm_func=identity),
+            ImpalaCNNBlock(32*model_size, 32*model_size, norm_func=norm_func),
             nn.ReLU()
         )
 
@@ -626,6 +650,15 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         self.cos_embedding = nn.Linear(self.n_cos, self.conv_out_size)
 
+        self.dueling = Dueling(
+            nn.Sequential(linear_layer(2048*model_size, self.linear_size),
+                          nn.ReLU(),
+                          linear_layer(self.linear_size, 1)),
+            nn.Sequential(linear_layer(2048*model_size, self.linear_size),
+                          nn.ReLU(),
+                          linear_layer(self.linear_size, actions))
+        )
+        """
         if not self.noisy:
             self.fc1 = nn.Linear(self.conv_out_size, self.linear_size)
             self.fc2 = nn.Linear(self.linear_size, self.actions)
@@ -633,7 +666,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         else:
             self.fc1 = NoisyLinear(self.conv_out_size, self.linear_size)
             self.fc2 = NoisyLinear(self.linear_size, self.actions)
-
+        """
 
         self.to(device)
 
@@ -646,7 +679,8 @@ class ImpalaCNNLargeIQN(nn.Module):
         o = self.conv(torch.zeros(1, *shape))
         return int(np.prod(o.size()))
 
-    def forward(self, input):
+    @torch.autocast('cuda')
+    def forward(self, input, advantages_only=False):
         """
         Quantile Calculation depending on the number of tau
 
@@ -655,7 +689,10 @@ class ImpalaCNNLargeIQN(nn.Module):
         taus [shape of ((batch_size, num_tau, 1))]
 
         """
-        input = input.float() / 256
+        #print("Forward Func")
+
+        input = (input.float() / 256).to(torch.float16)
+        #print(input.abs().sum().item())
         batch_size = input.size()[0]
 
         x = self.conv(input)
@@ -671,13 +708,15 @@ class ImpalaCNNLargeIQN(nn.Module):
         # x has shape (batch, layer_size) for multiplication –> reshape to (batch, 1, layer)
         x = (x.unsqueeze(1) * cos_x).view(batch_size * self.num_tau, self.conv_out_size)
 
-        x = torch.relu(self.fc1(x))
-        out = self.fc2(x)
+        #x = torch.relu(self.fc1(x))
+        #out = self.fc2(x)
+        out = self.dueling(x, advantages_only=advantages_only)
 
         return out.view(batch_size, self.num_tau, self.actions), taus
 
-    def qvals(self, inputs):
-        quantiles, _ = self.forward(inputs)
+    @torch.autocast('cuda')
+    def qvals(self, inputs, advantages_only=False):
+        quantiles, _ = self.forward(inputs, advantages_only)
         actions = quantiles.mean(dim=1)
         return actions
 

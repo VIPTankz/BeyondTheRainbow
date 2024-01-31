@@ -27,7 +27,7 @@ if __name__ == '__main__':
     if testing:
         num_envs = 4
         eval_envs = 2
-        eval_every = 3000
+        eval_every = 20000
         num_eval_episodes = 3
         n_steps = 100000
     else:

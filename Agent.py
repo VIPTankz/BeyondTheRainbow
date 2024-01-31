@@ -31,6 +31,7 @@ class EpsilonGreedy():
         else:
             return np.random.choice(self.action_space)
 
+
 class Agent():
     def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False):
 
@@ -59,8 +60,9 @@ class Agent():
         self.model_size = 2  # Scaling of IMPALA network
 
         # do not use both spectral and noisy, they will interfere with each other
-        self.noisy = True
-        self.spectral_norm = False  # this produces nans for some reason!
+        self.noisy = False
+        self.spectral_norm = True  # this produces nans for some reason! - using torch.autocast('cuda') fixed it?
+        # RIP mental sanity
 
         self.per_splits = 4
         if self.per_splits > num_envs:
@@ -129,7 +131,7 @@ class Agent():
         self.N_ATOMS = 51
 
         if not self.noisy:
-            if not self.loading_checkpoint:
+            if not self.loading_checkpoint and not self.testing:
                 self.eps_start = 1.0
                 self.eps_steps = 125000
                 self.eps_final = 0.01
@@ -167,7 +169,7 @@ class Agent():
             self.tgt_net = NatureIQN(self.input_dims[0], self.n_actions, device=self.device,
                                      noisy=self.noisy, num_tau=self.num_tau)
 
-        self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr, eps=0.00015) # 0.005 / self.batch_size
+        self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr, eps=0.005 / self.batch_size) # 0.005 / self.batch_size
 
         self.net.train()
         self.tgt_net.train()
@@ -206,8 +208,9 @@ class Agent():
 
             #state = T.tensor(np.array(list(observation)), dtype=T.float).to(self.net.device)
             state = T.tensor(observation, dtype=T.float).to(self.net.device)
-            qvals = self.net.qvals(state)
-            x = T.argmax(qvals, dim=1)
+            state = state.cuda()
+            qvals = self.net.qvals(state, advantages_only=True)
+            x = T.argmax(qvals, dim=1).detach().cpu()
             # this should contain (num_envs) different actions
 
             if not self.noisy:
