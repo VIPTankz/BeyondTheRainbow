@@ -1,8 +1,0 @@
-
-BTR_Trial BattleZone avg score 1000.00 total_steps 2400 fps 242.46
-BTR_Trial BattleZone avg score 1000.00 total_steps 3600 fps 166.31
-Traceback (most recent call last):
-  File "C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\main.py", line 147, in <module>
-    while not eval_done.any():
-              ^^^^^^^^^^^^^
-AttributeError: 'bool' object has no attribute 'any'

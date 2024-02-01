@@ -6,6 +6,8 @@ import sys
 import torch
 import gymnasium as gym
 import wandb
+import os
+from Agent import Agent
 from torch.profiler import profile, record_function, ProfilerActivity
 def make_env(envs_create):
     return gym.vector.AsyncVectorEnv([lambda: gym.wrappers.FrameStack(
@@ -15,20 +17,44 @@ def make_env(envs_create):
 
 if __name__ == '__main__':
 
-    from Agent import Agent
+    agent_name = "BTR_spectral_env4_persplit2_bs16"
+    testing = False
+    wandb_logs = True
 
-    agent_name = "BTR_V100_32env_rr1_bs64_persplit4"
+    if wandb_logs:
+        ###################### Making Dir Code
+        # Initialize a counter to keep track of the suffix
+        counter = 0
+
+        # Loop until you find a directory name that doesn't exist
+        while True:
+            # Construct the directory name with the current counter
+            if counter == 0:
+                new_dir_name = agent_name
+            else:
+                new_dir_name = f"{agent_name}_{counter}"
+
+            # Check if the directory already exists
+            if not os.path.exists(new_dir_name):
+                break
+
+            # If it exists, increment the counter and try again
+            counter += 1
+
+        os.mkdir(new_dir_name)
+        print(f"Created directory: {new_dir_name}")
+        os.chdir(new_dir_name)
+
+        #############################
 
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
-
-    testing = False
 
     if testing:
         num_envs = 4
         eval_envs = 2
         eval_every = 20000
-        num_eval_episodes = 3
+        num_eval_episodes = 10
         n_steps = 100000
     else:
         num_envs = 32
@@ -59,34 +85,36 @@ if __name__ == '__main__':
     agent = Agent(n_actions=env.action_space[0].n, input_dims=[4, 84, 84], device=device, num_envs=num_envs,
                   agent_name=agent_name, total_frames=n_steps, testing=testing)
 
+    if wandb_logs:
+        wandb.init(
+            # set the wandb project where this run will be logged
+            project="BeyondTheRainbow",
+            save_code=True,
+            name="Trial",
 
-    wandb.init(
-        # set the wandb project where this run will be logged
-        project="BeyondTheRainbow",
-
-        # track hyperparameters and run metadata
-        config={
-            "agent_name": agent_name,
-            "game": game,
-            "steps": n_steps,
-            "num_envs": num_envs,
-            "batch_size": agent.batch_size,
-            "IQN": agent.iqn,
-            "munchausen": agent.munchausen,
-            "impala": agent.impala,
-            "model_size": agent.model_size,
-            "noisy": agent.noisy,
-            "per_alpha": agent.per_alpha,
-            "discount": agent.gamma,
-            "maxpool": agent.maxpool,
-            "stabiliser": agent.stabiliser,
-            "target_replace": agent.replace_target_cnt,
-            "ema_tau": agent.soft_update_tau,
-            "tr_alpha": agent.tr_alpha,
-            "tr_period": agent.tr_period,
-            "loss": agent.loss_type
-        }
-    )
+            # track hyperparameters and run metadata
+            config={
+                "agent_name": agent_name,
+                "game": game,
+                "steps": n_steps,
+                "num_envs": num_envs,
+                "batch_size": agent.batch_size,
+                "IQN": agent.iqn,
+                "munchausen": agent.munchausen,
+                "impala": agent.impala,
+                "model_size": agent.model_size,
+                "noisy": agent.noisy,
+                "per_alpha": agent.per_alpha,
+                "discount": agent.gamma,
+                "maxpool": agent.maxpool,
+                "stabiliser": agent.stabiliser,
+                "target_replace": agent.replace_target_cnt,
+                "ema_tau": agent.soft_update_tau,
+                "tr_alpha": agent.tr_alpha,
+                "tr_period": agent.tr_period,
+                "loss": agent.loss_type
+            }
+        )
 
     scores_temp = []
     steps = 0
@@ -124,8 +152,9 @@ if __name__ == '__main__':
                 episodes += 1
                 scores.append([scores_count[i], steps])
                 scores_temp.append(scores_count[i])
-                wandb.log({"train_scores": scores_count[i], "steps": steps, "episodes": episodes,
-                           "walltime": time.time() - start})
+                if wandb_logs:
+                    wandb.log({"train_scores": scores_count[i], "steps": steps, "episodes": episodes,
+                               "walltime": time.time() - start})
 
                 scores_count[i] = 0
 
@@ -160,7 +189,6 @@ if __name__ == '__main__':
 
             eval_env = make_env(eval_envs)
 
-
             agent.set_eval_mode()
             evals = []
             eval_episodes = 0
@@ -181,7 +209,8 @@ if __name__ == '__main__':
 
                     if eval_done_[i]:
                         eval_episodes += 1
-                        wandb.log({"eval_scores": eval_scores[i]})
+                        if wandb_logs:
+                            wandb.log({"eval_scores": eval_scores[i]})
                         evals.append(eval_scores[i])
 
                         eval_scores[i] = 0
@@ -198,5 +227,5 @@ if __name__ == '__main__':
             next_eval += eval_every
             agent.set_train_mode()
 
-
-wandb.finish()
+    if wandb_logs:
+        wandb.finish()

@@ -1,3 +1,0 @@
-Traceback (most recent call last):
-  File "C:\Users\TYLER\Documents\GitHub\BeyondTheRainbow\main.py", line 127, in <module>
-ValueError: could not broadcast input array from shape (4,) into shape (4,84,84)

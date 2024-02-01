@@ -1,0 +1,24 @@
+2024-02-01 01:56:20,500 INFO    MainThread:238277 [wandb_setup.py:_flush():76] Current SDK version is 0.16.2
+2024-02-01 01:56:20,501 INFO    MainThread:238277 [wandb_setup.py:_flush():76] Configure stats pid to 238277
+2024-02-01 01:56:20,501 INFO    MainThread:238277 [wandb_setup.py:_flush():76] Loading settings from /home/tjc2g19/.config/wandb/settings
+2024-02-01 01:56:20,501 INFO    MainThread:238277 [wandb_setup.py:_flush():76] Loading settings from /mainfs/home/tjc2g19/BeyondTheRainbow/wandb/settings
+2024-02-01 01:56:20,501 INFO    MainThread:238277 [wandb_setup.py:_flush():76] Loading settings from environment variables: {'mode': 'offline'}
+2024-02-01 01:56:20,501 INFO    MainThread:238277 [wandb_setup.py:_flush():76] Applying setup settings: {'_disable_service': False}
+2024-02-01 01:56:20,501 INFO    MainThread:238277 [wandb_setup.py:_flush():76] Inferring run settings from compute environment: {'program_relpath': 'main.py', 'program_abspath': '/mainfs/home/tjc2g19/BeyondTheRainbow/main.py', 'program': '/mainfs/home/tjc2g19/BeyondTheRainbow/main.py'}
+2024-02-01 01:56:20,501 INFO    MainThread:238277 [wandb_init.py:_log_setup():526] Logging user logs to /mainfs/home/tjc2g19/BeyondTheRainbow/wandb/offline-run-20240201_015620-6xbz8dni/logs/debug.log
+2024-02-01 01:56:20,502 INFO    MainThread:238277 [wandb_init.py:_log_setup():527] Logging internal logs to /mainfs/home/tjc2g19/BeyondTheRainbow/wandb/offline-run-20240201_015620-6xbz8dni/logs/debug-internal.log
+2024-02-01 01:56:20,502 INFO    MainThread:238277 [wandb_init.py:init():566] calling init triggers
+2024-02-01 01:56:20,502 INFO    MainThread:238277 [wandb_init.py:init():573] wandb.init called with sweep_config: {}
+config: {'agent_name': 'BTR_V100_32env_rr1_bs64_persplit4', 'game': 'NameThisGame', 'steps': 50000000, 'num_envs': 32, 'batch_size': 64, 'IQN': True, 'munchausen': True, 'impala': True, 'model_size': 2, 'noisy': False, 'per_alpha': 0.2, 'discount': 0.99, 'maxpool': True, 'stabiliser': 'target_net', 'target_replace': 8000, 'ema_tau': 0.001, 'tr_alpha': 1, 'tr_period': 1500, 'loss': 'huber'}
+2024-02-01 01:56:20,502 INFO    MainThread:238277 [wandb_init.py:init():616] starting backend
+2024-02-01 01:56:20,502 INFO    MainThread:238277 [wandb_init.py:init():620] setting up manager
+2024-02-01 01:56:20,504 INFO    MainThread:238277 [backend.py:_multiprocessing_setup():105] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2024-02-01 01:56:20,573 INFO    MainThread:238277 [wandb_init.py:init():628] backend started and connected
+2024-02-01 01:56:20,582 INFO    MainThread:238277 [wandb_init.py:init():720] updated telemetry
+2024-02-01 01:56:20,741 INFO    MainThread:238277 [wandb_init.py:init():753] communicating run to backend with 90.0 second timeout
+2024-02-01 01:56:20,752 INFO    MainThread:238277 [wandb_init.py:init():804] starting run threads in backend
+2024-02-01 01:56:32,450 INFO    MainThread:238277 [wandb_run.py:_console_start():2233] atexit reg
+2024-02-01 01:56:32,450 INFO    MainThread:238277 [wandb_run.py:_redirect():2088] redirect: wrap_raw
+2024-02-01 01:56:32,450 INFO    MainThread:238277 [wandb_run.py:_redirect():2153] Wrapping output streams.
+2024-02-01 01:56:32,450 INFO    MainThread:238277 [wandb_run.py:_redirect():2178] Redirects installed.
+2024-02-01 01:56:32,451 INFO    MainThread:238277 [wandb_init.py:init():847] run started, returning control to user process

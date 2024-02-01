@@ -316,7 +316,7 @@ class ImpalaCNNResidual(nn.Module):
         self.conv_0 = norm_func(nn.Conv2d(in_channels=depth, out_channels=depth, kernel_size=3, stride=1, padding=1))
         self.conv_1 = norm_func(nn.Conv2d(in_channels=depth, out_channels=depth, kernel_size=3, stride=1, padding=1))
 
-    @torch.autocast('cuda')
+    #@torch.autocast('cuda')
     def forward(self, x):
         #if x.abs().sum().item() != 0:
         x_ = self.conv_0(self.relu(x))
@@ -338,7 +338,7 @@ class ImpalaCNNBlock(nn.Module):
         self.residual_0 = ImpalaCNNResidual(depth_out, norm_func=norm_func)
         self.residual_1 = ImpalaCNNResidual(depth_out, norm_func=norm_func)
 
-    @torch.autocast('cuda')
+    #@torch.autocast('cuda')
     def forward(self, x):
         #print("Conv Layer Block before")
         #print(x.abs().sum().item())
@@ -630,14 +630,15 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         if spectral:
             #spectral_norm_kwargs = {"eps": 1e-8}
-            norm_func = torch.nn.utils.spectral_norm
+            print("Using Spectral Norm")
+            norm_func = torch.nn.utils.parametrizations.spectral_norm
             #norm_func = partial(norm_func, **spectral_norm_kwargs)
         else:
             norm_func = identity
 
         self.conv = nn.Sequential(
-            ImpalaCNNBlock(in_depth, 16*model_size, norm_func=identity),
-            ImpalaCNNBlock(16*model_size, 32*model_size, norm_func=identity),
+            ImpalaCNNBlock(in_depth, 16*model_size, norm_func=norm_func),
+            ImpalaCNNBlock(16*model_size, 32*model_size, norm_func=norm_func),
             ImpalaCNNBlock(32*model_size, 32*model_size, norm_func=norm_func),
             nn.ReLU()
         )
@@ -679,7 +680,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         o = self.conv(torch.zeros(1, *shape))
         return int(np.prod(o.size()))
 
-    @torch.autocast('cuda')
+    #@torch.autocast('cuda')
     def forward(self, input, advantages_only=False):
         """
         Quantile Calculation depending on the number of tau
@@ -691,7 +692,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         """
         #print("Forward Func")
 
-        input = (input.float() / 256).to(torch.float16)
+        input = input.float() / 256#.to(torch.float16)
         #print(input.abs().sum().item())
         batch_size = input.size()[0]
 
@@ -714,7 +715,7 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         return out.view(batch_size, self.num_tau, self.actions), taus
 
-    @torch.autocast('cuda')
+    #@torch.autocast('cuda')
     def qvals(self, inputs, advantages_only=False):
         quantiles, _ = self.forward(inputs, advantages_only)
         actions = quantiles.mean(dim=1)
@@ -727,7 +728,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         taus = torch.rand(batch_size, n_tau).to(self.device).unsqueeze(-1) #(batch_size, n_tau, 1)
         cos = torch.cos(taus*self.pis)
 
-        assert cos.shape == (batch_size, n_tau, self.n_cos), "cos shape is incorrect"
+        #assert cos.shape == (batch_size, n_tau, self.n_cos), "cos shape is incorrect"
         return cos, taus
 
     def save_checkpoint(self, name):

@@ -47,14 +47,17 @@ class Agent():
         self.chkpt_dir = ""
 
         # IMPORTANT params, check these
-        self.lr = 5e-5 #5e-5  # 0.0001 for sample efficient version
+
         if self.testing:
             self.min_sampling_size = 2000
+            self.lr = 0.0001
         else:
             self.min_sampling_size = 200000
+            self.lr = 5e-5
+
         self.n = 3
         self.gamma = 0.99
-        self.batch_size = 64
+        self.batch_size = 16
 
         self.replay_ratio = 1
         self.model_size = 2  # Scaling of IMPALA network
@@ -64,7 +67,7 @@ class Agent():
         self.spectral_norm = True  # this produces nans for some reason! - using torch.autocast('cuda') fixed it?
         # RIP mental sanity
 
-        self.per_splits = 4
+        self.per_splits = 2
         if self.per_splits > num_envs:
             self.per_splits = num_envs
 
@@ -169,7 +172,7 @@ class Agent():
             self.tgt_net = NatureIQN(self.input_dims[0], self.n_actions, device=self.device,
                                      noisy=self.noisy, num_tau=self.num_tau)
 
-        self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr, eps=0.005 / self.batch_size) # 0.005 / self.batch_size
+        self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr, eps=0.00015)  # 0.005 / self.batch_size
 
         self.net.train()
         self.tgt_net.train()
@@ -208,17 +211,18 @@ class Agent():
 
             #state = T.tensor(np.array(list(observation)), dtype=T.float).to(self.net.device)
             state = T.tensor(observation, dtype=T.float).to(self.net.device)
-            state = state.cuda()
+            #state = state.cuda()
             qvals = self.net.qvals(state, advantages_only=True)
-            x = T.argmax(qvals, dim=1).detach().cpu()
+            x = T.argmax(qvals, dim=1) #.detach().cpu()
             # this should contain (num_envs) different actions
 
-            if not self.noisy:
+            if not self.noisy and not self.eval_mode:
                 for i in range(len(observation)):
                     action = self.epsilon.choose_action()
                     if action is not None:
                         x[i] = action
-            elif self.eval_mode:
+
+            if self.eval_mode:
                 for i in range(len(observation)):
                     if np.random.random() > 0.01:
                         x[i] = np.random.choice(self.action_space)
@@ -333,9 +337,8 @@ class Agent():
         plt.show()
         """
 
-
-        with torch.no_grad():
-            if self.noisy:
+        if self.noisy:
+            with torch.no_grad():
                 self.tgt_net.reset_noise()
 
         if self.c51:
