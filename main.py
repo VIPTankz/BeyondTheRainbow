@@ -17,7 +17,7 @@ def make_env(envs_create):
 
 if __name__ == '__main__':
 
-    agent_name = "BTR_spectral_env4_persplit2_bs16"
+    agent_name = "BTR_NewBuffer_spectral_env32_bs64"
     testing = False
     wandb_logs = True
 

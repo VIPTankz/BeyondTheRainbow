@@ -184,7 +184,7 @@ class Dueling(nn.Module):
         self.value_branch = value_branch
         self.advantage_branch = advantage_branch
 
-    @torch.autocast('cuda')
+    #@torch.autocast('cuda')
     def forward(self, x, advantages_only=False):
         x = self.flatten(x)
         advantages = self.advantage_branch(x)
@@ -347,9 +347,11 @@ class ImpalaCNNBlock(nn.Module):
         #print(self.conv)
         #print(self.conv.dtype)
         x = self.conv(x)
+        #if x.abs().sum().item() == 0:
+        #raise Exception("Tensor output all zeros")
         #This bug still exists -- this sometimes outputs all 0s
         # Bug is now FIXED (I HOPE, it still lives in my nightmares)
-        #turned out it was computation between float and cuda.float being dodgy
+        #turned out it in choose action? had to do action.cpu
 
         #raise Exception("Array of 0s!")
         #print(x.abs().sum().item())
@@ -681,7 +683,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         return int(np.prod(o.size()))
 
     #@torch.autocast('cuda')
-    def forward(self, input, advantages_only=False):
+    def forward(self, inputt, advantages_only=False):
         """
         Quantile Calculation depending on the number of tau
 
@@ -691,14 +693,16 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         """
         #print("Forward Func")
-
-        input = input.float() / 256#.to(torch.float16)
+        inputt = inputt.float() / 255
         #print(input.abs().sum().item())
-        batch_size = input.size()[0]
+        batch_size = inputt.size()[0]
 
-        x = self.conv(input)
+        x = self.conv(inputt)
+        #print(x.device)
         if self.maxpool:
             x = self.pool(x)
+
+        #print(x.device)
 
         x = x.view(batch_size, -1)
 
@@ -708,17 +712,20 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         # x has shape (batch, layer_size) for multiplication –> reshape to (batch, 1, layer)
         x = (x.unsqueeze(1) * cos_x).view(batch_size * self.num_tau, self.conv_out_size)
-
+        #print(x.device)
         #x = torch.relu(self.fc1(x))
         #out = self.fc2(x)
         out = self.dueling(x, advantages_only=advantages_only)
+        #print(out.device)
 
         return out.view(batch_size, self.num_tau, self.actions), taus
 
     #@torch.autocast('cuda')
     def qvals(self, inputs, advantages_only=False):
         quantiles, _ = self.forward(inputs, advantages_only)
+        #print(quantiles.device)
         actions = quantiles.mean(dim=1)
+        #print(actions.device)
         return actions
 
     def calc_cos(self, batch_size, n_tau=8):
