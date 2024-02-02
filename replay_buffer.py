@@ -1,7 +1,7 @@
 import collections
 import random
 from math import sqrt
-
+import time
 import numpy as np
 import torch
 #from gymnasium.wrappers.frame_stack import LazyFrames
@@ -75,12 +75,12 @@ class PrioritizedReplayBuffer:
 
         self.use_amp = use_amp
 
-        self.priority_sum = [0 for _ in range(2 * self.capacity)]
-        self.priority_min = [float('inf') for _ in range(2 * self.capacity)]
+        self.priority_sum = np.array([0 for _ in range(2 * self.capacity)])
+        self.priority_min = np.array([float('inf') for _ in range(2 * self.capacity)])
 
         self.max_priority = 1.0  # initial priority of new transitions
 
-        self.data = [None for _ in range(self.capacity)]  # cyclical buffer for transitions
+        self.data = np.array([None for _ in range(self.capacity)])  # cyclical buffer for transitions
         self.next_idx = 0  # next write location
         self.size = 0  # number of buffer elements
 
@@ -153,8 +153,28 @@ class PrioritizedReplayBuffer:
                 idx = 2 * idx + 1
         return idx - self.capacity
 
+    def find_prefix_sum_idx_para(self, prefix_sum_array):
+        """ Find the largest i such that the sum of the leaves from 1 to i is <= prefix sum for each element in the array"""
+        #indices = np.zeros_like(prefix_sum_array, dtype=int)
+
+        def find_single_idx(prefix_sum):
+            idx = 1
+            while idx < self.capacity:
+                if self.priority_sum[idx * 2] > prefix_sum:
+                    idx = 2 * idx
+                else:
+                    prefix_sum -= self.priority_sum[idx * 2]
+                    idx = 2 * idx + 1
+            return idx - self.capacity
+
+        vectorized_find_idx = np.vectorize(find_single_idx)
+        indices = vectorized_find_idx(prefix_sum_array)
+
+        return indices
+
     def sample(self, batch_size: int, beta: float) -> tuple:
-        weights = np.zeros(shape=batch_size, dtype=np.float32)
+        """
+        This was the previous unparallel version
         indices = np.zeros(shape=batch_size, dtype=np.int32)
 
         for i in range(batch_size):
@@ -162,35 +182,57 @@ class PrioritizedReplayBuffer:
             idx = self.find_prefix_sum_idx(p)
             indices[i] = idx
 
+
+        prob_min = self._min() / self._sum()
+        max_weight = (prob_min * self.size) ** (-beta)
+        """
+
+        p = np.random.random(batch_size) * self._sum()
+        indices = self.find_prefix_sum_idx_para(p)
+
         prob_min = self._min() / self._sum()
         max_weight = (prob_min * self.size) ** (-beta)
 
+
+        """
+        # can this be made parallel? Yes. Yes it can
+        weights = np.zeros(shape=batch_size, dtype=np.float32)
         for i in range(batch_size):
             idx = indices[i]
             prob = self.priority_sum[idx + self.capacity] / self._sum()
             weight = (prob * self.size) ** (-beta)
             weights[i] = weight / max_weight
+        """
 
+        idxs = indices[np.arange(batch_size)]
+        prob = self.priority_sum[idxs + self.capacity] / self._sum()
+        weight = (prob * self.size) ** (-beta)
+        weights = weight / max_weight
+
+        """
+        print("Old Method:")
+        #and this?
         samples = []
         for i in indices:
             samples.append(self.data[i])
+        """
+
+        idxs = np.array(indices)
+        samples = self.data[idxs]
+
 
         return indices, weights, self.prepare_samples(samples)
 
     def prepare_samples(self, batch):
         state, next_state, action, reward, done = zip(*batch)
+
         state = list(map(lambda x: torch.from_numpy(x.__array__()), state))
         next_state = list(map(lambda x: torch.from_numpy(x.__array__()), next_state))
 
         state, next_state, action, reward, done = map(torch.stack, [state, next_state, action, reward, done])
 
-        state = state.to(torch.float16).cuda()
-        next_state = next_state.to(torch.float16).cuda()
-
-        """
-        return prep_observation_for_qnet(state, self.use_amp), prep_observation_for_qnet(next_state, self.use_amp), \
-               action.squeeze(), reward.squeeze(), done.squeeze()
-        """
+        state = state.to(torch.float32).cuda()
+        next_state = next_state.to(torch.float32).cuda()
 
         return state, next_state, \
                action.squeeze(), reward.squeeze(), done.squeeze()

@@ -42,10 +42,6 @@ class Agent():
         self.agent_name = agent_name
         self.testing = testing
 
-
-
-        self.scaler = GradScaler(enabled=True)
-
         self.action_space = [i for i in range(self.n_actions)]
         self.learn_step_counter = 0
 
@@ -216,7 +212,7 @@ class Agent():
                 self.net.reset_noise()
 
             #state = T.tensor(np.array(list(observation)), dtype=T.float).to(self.net.device)
-            state = T.tensor(observation, dtype=T.float16).to(self.net.device)
+            state = T.tensor(observation, dtype=T.float32).to(self.net.device)
             #state = state.cuda()
             qvals = self.net.qvals(state, advantages_only=True)
             x = T.argmax(qvals, dim=1).cpu()
@@ -448,18 +444,11 @@ class Agent():
             loss = loss.mean()
 
 
-        """ Code for full precision
         loss.backward()
         T.nn.utils.clip_grad_norm_(self.net.parameters(), 10)
         self.optimizer.step()
-        """
 
-        self.scaler.scale(loss).backward()
 
-        self.scaler.unscale_(self.optimizer)
-        T.nn.utils.clip_grad_norm_(self.net.parameters(), 10)
-        self.scaler.step(self.optimizer)
-        self.scaler.update()
 
         if not self.noisy:
             self.epsilon.update_eps()
