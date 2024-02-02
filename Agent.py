@@ -7,6 +7,7 @@ import torch.nn.functional as F
 import torch.optim as optim
 from replay_buffer import PrioritizedReplayBuffer
 import numpy as np
+from torch.cuda.amp import GradScaler, autocast
 from collections import deque
 import pickle
 import matplotlib.pyplot as plt
@@ -40,6 +41,10 @@ class Agent():
         self.device = device
         self.agent_name = agent_name
         self.testing = testing
+
+
+
+        self.scaler = GradScaler(enabled=True)
 
         self.action_space = [i for i in range(self.n_actions)]
         self.learn_step_counter = 0
@@ -442,9 +447,19 @@ class Agent():
             loss = loss * weights.to(self.net.device)
             loss = loss.mean()
 
+
+        """ Code for full precision
         loss.backward()
         T.nn.utils.clip_grad_norm_(self.net.parameters(), 10)
         self.optimizer.step()
+        """
+
+        self.scaler.scale(loss).backward()
+
+        self.scaler.unscale_(self.optimizer)
+        T.nn.utils.clip_grad_norm_(self.net.parameters(), 10)
+        self.scaler.step(self.optimizer)
+        self.scaler.update()
 
         if not self.noisy:
             self.epsilon.update_eps()

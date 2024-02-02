@@ -18,8 +18,8 @@ def make_env(envs_create):
 if __name__ == '__main__':
 
     agent_name = "BTR_spectral_env64_bs256"
-    testing = False
-    wandb_logs = True
+    testing = True
+    wandb_logs = not testing
 
     if wandb_logs:
         ###################### Making Dir Code
