@@ -682,7 +682,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         o = self.conv(torch.zeros(1, *shape))
         return int(np.prod(o.size()))
 
-    #@torch.autocast('cuda')
+    @torch.autocast('cuda')
     def forward(self, inputt, advantages_only=False):
         """
         Quantile Calculation depending on the number of tau
@@ -720,7 +720,7 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         return out.view(batch_size, self.num_tau, self.actions), taus
 
-    #@torch.autocast('cuda')
+    @torch.autocast('cuda')
     def qvals(self, inputs, advantages_only=False):
         quantiles, _ = self.forward(inputs, advantages_only)
         #print(quantiles.device)

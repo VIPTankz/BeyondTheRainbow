@@ -184,8 +184,8 @@ class PrioritizedReplayBuffer:
 
         state, next_state, action, reward, done = map(torch.stack, [state, next_state, action, reward, done])
 
-        state = state.to(torch.float).cuda()
-        next_state = next_state.to(torch.float).cuda()
+        state = state.to(torch.float16).cuda()
+        next_state = next_state.to(torch.float16).cuda()
 
         """
         return prep_observation_for_qnet(state, self.use_amp), prep_observation_for_qnet(next_state, self.use_amp), \

@@ -1,0 +1,80 @@
+diff --git a/Agent.py b/Agent.py
+index 2d56813..ebd6d9b 100644
+--- a/Agent.py
++++ b/Agent.py
+@@ -211,7 +211,7 @@ class Agent():
+                 self.net.reset_noise()
+ 
+             #state = T.tensor(np.array(list(observation)), dtype=T.float).to(self.net.device)
+-            state = T.tensor(observation, dtype=T.float32).to(self.net.device)
++            state = T.tensor(observation, dtype=T.float16).to(self.net.device)
+             #state = state.cuda()
+             qvals = self.net.qvals(state, advantages_only=True)
+             x = T.argmax(qvals, dim=1).cpu()
+diff --git a/__pycache__/networks.cpython-311.pyc b/__pycache__/networks.cpython-311.pyc
+index ebd6de5..1bcb14b 100644
+Binary files a/__pycache__/networks.cpython-311.pyc and b/__pycache__/networks.cpython-311.pyc differ
+diff --git a/__pycache__/replay_buffer.cpython-311.pyc b/__pycache__/replay_buffer.cpython-311.pyc
+index f17e464..a894011 100644
+Binary files a/__pycache__/replay_buffer.cpython-311.pyc and b/__pycache__/replay_buffer.cpython-311.pyc differ
+diff --git a/main.py b/main.py
+index 0661378..92c5adb 100644
+--- a/main.py
++++ b/main.py
+@@ -17,8 +17,8 @@ def make_env(envs_create):
+ 
+ if __name__ == '__main__':
+ 
+-    agent_name = "BTR_NewBuffer_spectral_env32_bs64"
+-    testing = False
++    agent_name = "BTR_spectral_env32_bs64"
++    testing = True
+     wandb_logs = True
+ 
+     if wandb_logs:
+@@ -57,7 +57,7 @@ if __name__ == '__main__':
+         num_eval_episodes = 10
+         n_steps = 100000
+     else:
+-        num_envs = 32
++        num_envs = 64
+         eval_envs = 8
+         n_steps = 50000000
+         num_eval_episodes = 100
+diff --git a/networks.py b/networks.py
+index f64e654..896f682 100644
+--- a/networks.py
++++ b/networks.py
+@@ -682,7 +682,7 @@ class ImpalaCNNLargeIQN(nn.Module):
+         o = self.conv(torch.zeros(1, *shape))
+         return int(np.prod(o.size()))
+ 
+-    #@torch.autocast('cuda')
++    @torch.autocast('cuda')
+     def forward(self, inputt, advantages_only=False):
+         """
+         Quantile Calculation depending on the number of tau
+@@ -720,7 +720,7 @@ class ImpalaCNNLargeIQN(nn.Module):
+ 
+         return out.view(batch_size, self.num_tau, self.actions), taus
+ 
+-    #@torch.autocast('cuda')
++    @torch.autocast('cuda')
+     def qvals(self, inputs, advantages_only=False):
+         quantiles, _ = self.forward(inputs, advantages_only)
+         #print(quantiles.device)
+diff --git a/replay_buffer.py b/replay_buffer.py
+index a3915b9..24ed83a 100644
+--- a/replay_buffer.py
++++ b/replay_buffer.py
+@@ -184,8 +184,8 @@ class PrioritizedReplayBuffer:
+ 
+         state, next_state, action, reward, done = map(torch.stack, [state, next_state, action, reward, done])
+ 
+-        state = state.to(torch.float).cuda()
+-        next_state = next_state.to(torch.float).cuda()
++        state = state.to(torch.float16).cuda()
++        next_state = next_state.to(torch.float16).cuda()
+ 
+         """
+         return prep_observation_for_qnet(state, self.use_amp), prep_observation_for_qnet(next_state, self.use_amp), \

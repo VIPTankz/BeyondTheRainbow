@@ -57,7 +57,7 @@ class Agent():
 
         self.n = 3
         self.gamma = 0.99
-        self.batch_size = 64
+        self.batch_size = 256
 
         self.replay_ratio = 1
         self.model_size = 2  # Scaling of IMPALA network
@@ -211,7 +211,7 @@ class Agent():
                 self.net.reset_noise()
 
             #state = T.tensor(np.array(list(observation)), dtype=T.float).to(self.net.device)
-            state = T.tensor(observation, dtype=T.float32).to(self.net.device)
+            state = T.tensor(observation, dtype=T.float16).to(self.net.device)
             #state = state.cuda()
             qvals = self.net.qvals(state, advantages_only=True)
             x = T.argmax(qvals, dim=1).cpu()

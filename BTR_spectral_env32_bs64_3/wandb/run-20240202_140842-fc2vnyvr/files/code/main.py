@@ -17,8 +17,8 @@ def make_env(envs_create):
 
 if __name__ == '__main__':
 
-    agent_name = "BTR_spectral_env64_bs256"
-    testing = False
+    agent_name = "BTR_spectral_env32_bs64"
+    testing = True
     wandb_logs = True
 
     if wandb_logs:
