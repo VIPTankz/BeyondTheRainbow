@@ -5,9 +5,8 @@ import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from replay_buffer import PrioritizedReplayBuffer
+from memory import ReplayMemory
 import numpy as np
-from torch.cuda.amp import GradScaler, autocast
 from collections import deque
 import pickle
 import matplotlib.pyplot as plt
@@ -34,7 +33,7 @@ class EpsilonGreedy():
 
 
 class Agent():
-    def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False):
+    def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=16):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -58,15 +57,19 @@ class Agent():
 
         self.n = 3
         self.gamma = 0.99
-        self.batch_size = 256
+        self.batch_size = batch_size
 
         self.replay_ratio = 1
         self.model_size = 2  # Scaling of IMPALA network
 
         # do not use both spectral and noisy, they will interfere with each other
         self.noisy = False
-        self.spectral_norm = True
+        self.spectral_norm = True  # this produces nans for some reason! - using torch.autocast('cuda') fixed it?
+        # RIP mental sanity
 
+        self.per_splits = 2
+        if self.per_splits > num_envs:
+            self.per_splits = num_envs
 
         self.impala = True #non impala only implemented for iqn
 
@@ -83,8 +86,7 @@ class Agent():
             self.lo = -1
             self.alpha = 0.9
 
-        # must be power of 2!
-        self.max_mem_size = 1048576
+        self.max_mem_size = 1000000
 
         self.loading_checkpoint = False
         self.viewing_output = False
@@ -118,8 +120,6 @@ class Agent():
 
         self.loss_type = "huber"  # NOT IMPLEMENTED
 
-        self.per_eps = 1e-6
-
         if self.iqn:
             self.num_tau = 8
 
@@ -136,7 +136,7 @@ class Agent():
         if not self.noisy:
             if not self.loading_checkpoint and not self.testing:
                 self.eps_start = 1.0
-                self.eps_steps = 125000
+                self.eps_steps = (self.replay_ratio * 500000) / num_envs
                 self.eps_final = 0.01
             else:
                 self.eps_start = 0.01
@@ -146,8 +146,9 @@ class Agent():
             self.epsilon = EpsilonGreedy(self.eps_start, self.eps_steps, self.eps_final, self.action_space)
 
         self.num_envs = num_envs
-
-        self.memory = PrioritizedReplayBuffer(self.max_mem_size, self.gamma, self.n, self.num_envs, use_amp=False)
+        self.memories = []
+        for i in range(num_envs):
+            self.memories.append(ReplayMemory(self.max_mem_size // num_envs, self.n, self.gamma, device, alpha=self.per_alpha, beta=self.per_beta))
 
         if self.impala:
             if not self.iqn:
@@ -205,18 +206,16 @@ class Agent():
         self.tgt_net.train()
         self.eval_mode = False
 
-
     def choose_action(self, observation):
         with T.no_grad():
             if self.noisy:
                 self.net.reset_noise()
 
             #state = T.tensor(np.array(list(observation)), dtype=T.float).to(self.net.device)
-            state = T.tensor(observation, dtype=T.float32).to(self.net.device)
+            state = T.tensor(observation, dtype=T.float).to(self.net.device)
             #state = state.cuda()
             qvals = self.net.qvals(state, advantages_only=True)
             x = T.argmax(qvals, dim=1).cpu()
-
             # this should contain (num_envs) different actions
 
             if not self.noisy and not self.eval_mode:
@@ -234,9 +233,10 @@ class Agent():
 
     def store_transition(self, state, action, reward, done, stream, prio=None):
         if prio is None:
-            self.memory.put(state, action, reward, done, j=stream, prio=True)
+
+            self.memories[stream].append(torch.from_numpy(state), action, reward, done)
         else:
-            self.memory.put(state, action, reward, done, j=stream, prio=False)
+            self.memories[stream].append(torch.from_numpy(state), action, reward, done, 0)
         self.env_steps += 1
 
     def replace_target_network(self):
@@ -277,7 +277,10 @@ class Agent():
         if self.env_steps < self.min_sampling_size:
             return
 
-        self.per_beta = min(self.per_beta + self.priority_weight_increase, 1)
+        for i in range(self.num_envs):
+            self.memories[i].priority_weight = min(self.memories[i].priority_weight + self.priority_weight_increase, 1)
+
+        self.optimizer.zero_grad()
 
         if not self.soft_updates:
             if self.grad_steps % self.replace_target_cnt == 0:
@@ -285,13 +288,50 @@ class Agent():
         else:
             self.soft_update()
 
-        indices, weights, (states, next_states, actions, rewards, dones) = self.memory.sample(self.batch_size, self.per_beta)
-        weights = torch.from_numpy(weights).cuda()
+        ###########new Replay
 
-        dones = dones.bool()
+        #get total priority from each tree
+        buffer_totals = np.empty(self.num_envs, dtype=float)
+        for i in range(self.num_envs):
+            buffer_totals[i] = self.memories[i].transitions.total()
+
+        # create probability distribution based on prios
+        buffer_dist = buffer_totals / buffer_totals.sum()
+
+        #sample across them
+        memories_to_sample = np.random.choice(self.num_envs, self.batch_size, p=buffer_dist)
+
+        # array of how many samples we need from each PER
+        sample_counts = np.bincount(memories_to_sample, minlength=self.num_envs)
+
+        # get the samples into states, actions, etc
+        idxs_list = []
+        first = True
+        for i in range(self.num_envs):
+            if sample_counts[i] != 0:
+
+                if first:
+                    idxs, states, actions, rewards, next_states, dones, weights = self.memories[i].sample(sample_counts[i])
+                    idxs_list.append(idxs)
+                    first = False
+
+                else:
+                    idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[i].sample(sample_counts[i])
+
+                    #idxs = np.concatenate((idxs, idxsN))
+                    idxs_list.append(idxsN)
+                    states = torch.cat((states, statesN))
+                    actions = torch.cat((actions, actionsN))
+                    rewards = torch.cat((rewards, rewardsN))
+                    next_states = torch.cat((next_states, next_statesN))
+                    dones = torch.cat((dones, donesN))
+                    weights = torch.cat((weights, weightsN))
+            else:
+                idxs_list.append(None)
+
+        dones = dones.squeeze()
 
         #use this code to check your states are correct
-
         """
         plt.imshow(states[0][0].unsqueeze(dim=0).cpu().permute(1, 2, 0))
         plt.show()
@@ -302,13 +342,10 @@ class Agent():
         plt.imshow(states[2][0].unsqueeze(dim=0).cpu().permute(1, 2, 0))
         plt.show()
         """
-        self.net.train()
 
         if self.noisy:
             with torch.no_grad():
                 self.tgt_net.reset_noise()
-
-        self.optimizer.zero_grad()
 
         if self.c51:
             distr_v, qvals_v = self.net.both(states)
@@ -443,12 +480,9 @@ class Agent():
             loss = loss * weights.to(self.net.device)
             loss = loss.mean()
 
-
         loss.backward()
         T.nn.utils.clip_grad_norm_(self.net.parameters(), 10)
         self.optimizer.step()
-
-
 
         if not self.noisy:
             self.epsilon.update_eps()
@@ -457,7 +491,24 @@ class Agent():
         if self.grad_steps % 10000 == 0:
             print("Completed " + str(self.grad_steps) + " gradient steps")
 
-        self.memory.update_priorities(indices, np.abs(loss_v.detach().cpu().numpy()) + self.per_eps)
+        # get individual losses for each PER
+        result_list = []
+        start_idx = 0
+
+        # Split the data tensor into sub-tensors
+        for count in sample_counts:
+            if count > 0:
+                end_idx = start_idx + count
+                sub_tensor = loss_v[start_idx:end_idx]
+                result_list.append(sub_tensor)
+                start_idx = end_idx
+            else:
+                result_list.append(None)
+
+        # update prios for each PER
+        for i in range(self.num_envs):
+            if sample_counts[i] > 0:
+                self.memories[i].update_priorities(idxs_list[i], result_list[i].cpu().detach().numpy())
 
 
 def calculate_huber_loss(td_errors, k=1.0):

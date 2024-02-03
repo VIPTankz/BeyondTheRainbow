@@ -14,10 +14,12 @@ def make_env(envs_create):
         gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(envs_create)],
                                      context="spawn")
 
-
 if __name__ == '__main__':
 
-    agent_name = "BTR_spectral_env64_bs256"
+    envs = int(sys.argv[2])
+    bs = int(sys.argv[3])
+
+    agent_name = "SpeedTests_envs" + str(envs) + "_bs" + str(bs)
     testing = False
     wandb_logs = not testing
 
@@ -57,7 +59,7 @@ if __name__ == '__main__':
         num_eval_episodes = 10
         n_steps = 100000
     else:
-        num_envs = 64
+        num_envs = envs
         eval_envs = 8
         n_steps = 50000000
         num_eval_episodes = 100
@@ -73,7 +75,7 @@ if __name__ == '__main__':
 
     print("Currently Playing Game: " + str(game))
 
-    gpu = sys.argv[2]
+    gpu = "0"
     device = torch.device('cuda:' + gpu if torch.cuda.is_available() else 'cpu')
     print("Device: " + str(device))
 
@@ -83,7 +85,7 @@ if __name__ == '__main__':
     print(env.action_space[0])
 
     agent = Agent(n_actions=env.action_space[0].n, input_dims=[4, 84, 84], device=device, num_envs=num_envs,
-                  agent_name=agent_name, total_frames=n_steps, testing=testing)
+                  agent_name=agent_name, total_frames=n_steps, testing=testing, batch_size=bs)
 
     if wandb_logs:
         wandb.init(

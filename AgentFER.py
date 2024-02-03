@@ -5,8 +5,9 @@ import torch as T
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from memory import ReplayMemory
+from replay_buffer import PrioritizedReplayBuffer
 import numpy as np
+from torch.cuda.amp import GradScaler, autocast
 from collections import deque
 import pickle
 import matplotlib.pyplot as plt
@@ -57,19 +58,15 @@ class Agent():
 
         self.n = 3
         self.gamma = 0.99
-        self.batch_size = 16
+        self.batch_size = 256
 
         self.replay_ratio = 1
         self.model_size = 2  # Scaling of IMPALA network
 
         # do not use both spectral and noisy, they will interfere with each other
         self.noisy = False
-        self.spectral_norm = True  # this produces nans for some reason! - using torch.autocast('cuda') fixed it?
-        # RIP mental sanity
+        self.spectral_norm = True
 
-        self.per_splits = 2
-        if self.per_splits > num_envs:
-            self.per_splits = num_envs
 
         self.impala = True #non impala only implemented for iqn
 
@@ -86,7 +83,8 @@ class Agent():
             self.lo = -1
             self.alpha = 0.9
 
-        self.max_mem_size = 1000000
+        # must be power of 2!
+        self.max_mem_size = 1048576
 
         self.loading_checkpoint = False
         self.viewing_output = False
@@ -120,6 +118,8 @@ class Agent():
 
         self.loss_type = "huber"  # NOT IMPLEMENTED
 
+        self.per_eps = 1e-6
+
         if self.iqn:
             self.num_tau = 8
 
@@ -136,7 +136,7 @@ class Agent():
         if not self.noisy:
             if not self.loading_checkpoint and not self.testing:
                 self.eps_start = 1.0
-                self.eps_steps = 125000
+                self.eps_steps = (self.replay_ratio * 500000) / num_envs
                 self.eps_final = 0.01
             else:
                 self.eps_start = 0.01
@@ -146,9 +146,8 @@ class Agent():
             self.epsilon = EpsilonGreedy(self.eps_start, self.eps_steps, self.eps_final, self.action_space)
 
         self.num_envs = num_envs
-        self.memories = []
-        for i in range(num_envs):
-            self.memories.append(ReplayMemory(self.max_mem_size // num_envs, self.n, self.gamma, device, alpha=self.per_alpha, beta=self.per_beta))
+
+        self.memory = PrioritizedReplayBuffer(self.max_mem_size, self.gamma, self.n, self.num_envs, use_amp=False)
 
         if self.impala:
             if not self.iqn:
@@ -175,7 +174,7 @@ class Agent():
         self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr, eps=0.00015)  # 0.005 / self.batch_size
 
         self.net.train()
-        self.tgt_net.train()
+        #self.tgt_net.train()
 
         for param in self.tgt_net.parameters():
             param.requires_grad = False
@@ -189,7 +188,9 @@ class Agent():
         if self.loading_checkpoint:
             self.load_models()
 
-        self.priority_weight_increase = (1 - self.per_beta) / (self.total_frames - self.min_sampling_size)
+        self.total_grad_steps = self.total_frames / (self.num_envs / self.replay_ratio)
+
+        self.priority_weight_increase = (1 - self.per_beta) / self.total_grad_steps
 
     def get_grad_steps(self):
         return self.grad_steps
@@ -204,16 +205,18 @@ class Agent():
         self.tgt_net.train()
         self.eval_mode = False
 
+
     def choose_action(self, observation):
         with T.no_grad():
             if self.noisy:
                 self.net.reset_noise()
 
             #state = T.tensor(np.array(list(observation)), dtype=T.float).to(self.net.device)
-            state = T.tensor(observation, dtype=T.float).to(self.net.device)
+            state = T.tensor(observation, dtype=T.float32).to(self.net.device)
             #state = state.cuda()
             qvals = self.net.qvals(state, advantages_only=True)
-            x = T.argmax(qvals, dim=1) #.detach().cpu()
+            x = T.argmax(qvals, dim=1).cpu()
+
             # this should contain (num_envs) different actions
 
             if not self.noisy and not self.eval_mode:
@@ -231,10 +234,9 @@ class Agent():
 
     def store_transition(self, state, action, reward, done, stream, prio=None):
         if prio is None:
-
-            self.memories[stream].append(torch.from_numpy(state), action, reward, done)
+            self.memory.put(state, action, reward, done, j=stream, prio=True)
         else:
-            self.memories[stream].append(torch.from_numpy(state), action, reward, done, 0)
+            self.memory.put(state, action, reward, done, j=stream, prio=False)
         self.env_steps += 1
 
     def replace_target_network(self):
@@ -275,10 +277,7 @@ class Agent():
         if self.env_steps < self.min_sampling_size:
             return
 
-        for i in range(self.num_envs):
-            self.memories[i].priority_weight = min(self.memories[i].priority_weight + self.priority_weight_increase, 1)
-
-        self.optimizer.zero_grad()
+        self.per_beta = min(self.per_beta + self.priority_weight_increase, 1)
 
         if not self.soft_updates:
             if self.grad_steps % self.replace_target_cnt == 0:
@@ -286,47 +285,13 @@ class Agent():
         else:
             self.soft_update()
 
-        try:
-            if self.num_envs > 1 and self.per_splits > 1:
-                mems = np.random.choice(self.num_envs, self.per_splits, replace=False)
+        indices, weights, (states, next_states, actions, rewards, dones) = self.memory.sample(self.batch_size, self.per_beta)
+        weights = torch.from_numpy(weights).cuda()
 
-                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mems[0]].sample(
-                    self.batch_size // self.per_splits)
-
-                for i in range(self.per_splits - 1):
-
-                    idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[mems[i + 1]].sample(
-                        self.batch_size // self.per_splits)
-
-                    idxs = np.concatenate((idxs, idxsN))
-                    states = torch.cat((states, statesN))
-                    actions = torch.cat((actions, actionsN))
-                    rewards = torch.cat((rewards, rewardsN))
-                    next_states = torch.cat((next_states, next_statesN))
-                    dones = torch.cat((dones, donesN))
-                    weights = torch.cat((weights, weightsN))
-
-            else:
-                mem = np.random.randint(0, len(self.memories))
-
-                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mem].sample(
-                    self.batch_size)
-
-        except Exception as e:
-            tb = traceback.format_exc()
-            print(tb)
-            print("Infinity Error?")
-            raise Exception("stop")
-            return
-
-
-        states = states.clone().detach().to(self.net.device)
-        rewards = rewards.clone().detach().to(self.net.device)
-        dones = dones.clone().detach().to(self.net.device).squeeze()
-        actions = actions.clone().detach().to(self.net.device)
-        states_ = next_states.clone().detach().to(self.net.device)
+        dones = dones.bool()
 
         #use this code to check your states are correct
+
         """
         plt.imshow(states[0][0].unsqueeze(dim=0).cpu().permute(1, 2, 0))
         plt.show()
@@ -337,10 +302,13 @@ class Agent():
         plt.imshow(states[2][0].unsqueeze(dim=0).cpu().permute(1, 2, 0))
         plt.show()
         """
+        self.net.train()
 
         if self.noisy:
             with torch.no_grad():
                 self.tgt_net.reset_noise()
+
+        self.optimizer.zero_grad()
 
         if self.c51:
             distr_v, qvals_v = self.net.both(states)
@@ -348,8 +316,8 @@ class Agent():
             state_log_sm_v = F.log_softmax(state_action_values, dim=1)
 
             with torch.no_grad():
-                next_distr_v, next_qvals_v = self.tgt_net.both(states_)
-                action_distr_v, action_qvals_v = self.net.both(states_)
+                next_distr_v, next_qvals_v = self.tgt_net.both(next_states)
+                action_distr_v, action_qvals_v = self.net.both(next_states)
 
                 next_actions_v = action_qvals_v.max(1)[1]
 
@@ -372,8 +340,8 @@ class Agent():
             indices = np.arange(self.batch_size)
 
             q_pred = self.net.forward(states)
-            q_targets = self.tgt_net.forward(states_)
-            q_actions = self.net.forward(states_)
+            q_targets = self.tgt_net.forward(next_states)
+            q_actions = self.net.forward(next_states)
 
             q_pred = q_pred[indices, actions]
 
@@ -389,11 +357,11 @@ class Agent():
 
         elif self.iqn and not self.munchausen:
 
-            Q_targets_next, _ = self.tgt_net(states_)
+            Q_targets_next, _ = self.tgt_net(next_states)
 
             if self.double: #this may be wrong - seems to perform better without. Could just be chance though
                 indices = np.arange(self.batch_size)
-                q_actions = self.net.qvals(states_)
+                q_actions = self.net.qvals(next_states)
                 max_actions = T.argmax(q_actions, dim=1)
                 Q_targets_next = Q_targets_next[indices,: ,max_actions].detach().unsqueeze(1)
             else:
@@ -475,9 +443,12 @@ class Agent():
             loss = loss * weights.to(self.net.device)
             loss = loss.mean()
 
+
         loss.backward()
         T.nn.utils.clip_grad_norm_(self.net.parameters(), 10)
         self.optimizer.step()
+
+
 
         if not self.noisy:
             self.epsilon.update_eps()
@@ -486,13 +457,7 @@ class Agent():
         if self.grad_steps % 10000 == 0:
             print("Completed " + str(self.grad_steps) + " gradient steps")
 
-        if self.num_envs > 1 and self.per_splits > 1:
-            idxs = np.split(idxs, self.per_splits)
-            loss_v = torch.split(loss_v, self.batch_size // self.per_splits)
-            for i in range(self.per_splits):
-                self.memories[mems[i]].update_priorities(idxs[i], loss_v[i].cpu().detach().numpy())
-        else:
-            self.memories[mem].update_priorities(idxs, loss_v.cpu().detach().numpy())
+        self.memory.update_priorities(indices, np.abs(loss_v.detach().cpu().numpy()) + self.per_eps)
 
 
 def calculate_huber_loss(td_errors, k=1.0):

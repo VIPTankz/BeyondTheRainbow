@@ -134,8 +134,8 @@ class ReplayMemory():
     transitions = self._get_transitions(idxs)
     # Create un-discretised states and nth next states
     all_states = transitions['state']
-    states = torch.tensor(all_states[:, :self.history], device=self.device, dtype=torch.uint8)
-    next_states = torch.tensor(all_states[:, self.n:self.n + self.history], device=self.device, dtype=torch.uint8)
+    states = torch.tensor(all_states[:, :self.history], dtype=torch.uint8)
+    next_states = torch.tensor(all_states[:, self.n:self.n + self.history], dtype=torch.uint8)
     # Discrete actions to be used as index
     actions = torch.tensor(np.copy(transitions['action'][:, self.history - 1]), dtype=torch.int64, device=self.device)
     # Calculate truncated n-step discounted returns R^n = Σ_k=0->n-1 (γ^k)R_t+k+1 (note that invalid nth next states have reward 0)
@@ -154,6 +154,8 @@ class ReplayMemory():
     weights = torch.tensor(weights / weights.max(), dtype=torch.float32, device=self.device)  # Normalise by max importance-sampling weight from batch
     nonterminals = nonterminals.bool()
     nonterminals = ~nonterminals
+    states = states.to(torch.float32).cuda()
+    next_states = next_states.to(torch.float32).cuda()
     return tree_idxs, states, actions, returns, next_states, nonterminals, weights
 
   def update_priorities(self, idxs, priorities):
