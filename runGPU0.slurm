@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --nodes=1
-#SBATCH --ntasks=36
+#SBATCH --ntasks=24
+#SBATCH --cpus-per-task=2
 #SBATCH --mem=96000
 #SBATCH -p batch
 #SBATCH --job-name=BTR_Atari

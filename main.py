@@ -20,7 +20,7 @@ if __name__ == '__main__':
     bs = int(sys.argv[3])
 
     agent_name = "SpeedTests_envs" + str(envs) + "_bs" + str(bs)
-    testing = False
+    testing = True
     wandb_logs = not testing
 
     if wandb_logs:

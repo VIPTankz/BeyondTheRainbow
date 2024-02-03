@@ -67,10 +67,6 @@ class Agent():
         self.spectral_norm = True  # this produces nans for some reason! - using torch.autocast('cuda') fixed it?
         # RIP mental sanity
 
-        self.per_splits = 2
-        if self.per_splits > num_envs:
-            self.per_splits = num_envs
-
         self.impala = True #non impala only implemented for iqn
 
         # Don't use both of these, they are mutually exclusive
@@ -86,7 +82,7 @@ class Agent():
             self.lo = -1
             self.alpha = 0.9
 
-        self.max_mem_size = 1000000
+        self.max_mem_size = 1048576
 
         self.loading_checkpoint = False
         self.viewing_output = False
