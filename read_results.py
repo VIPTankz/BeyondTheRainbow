@@ -1,11 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-file = "BTR_V100_32env_rr1_bs64_persplit4"
-total_frames = 15 + 1
+file = "SpeedTests_envs64_bs256"
+total_frames = 8 + 1
 
 # Load the combined data from the file
-combined_data = np.load("results\\" + file + "BattleZoneEvaluation.npy")
+combined_data = np.load("results\\" + file + "\\" + file + "BattleZoneEvaluation.npy")
 print(combined_data.shape)
 
 # Calculate the mean of each row (axis=1) to get the scores

@@ -18,9 +18,10 @@ if __name__ == '__main__':
 
     envs = int(sys.argv[2])
     bs = int(sys.argv[3])
+    rr = int(sys.argv[4])
 
-    agent_name = "SpeedTests_envs" + str(envs) + "_bs" + str(bs)
-    testing = True
+    agent_name = "SpeedTests_envs" + str(envs) + "_bs" + str(bs) + "_rr" + str(rr)
+    testing = False
     wandb_logs = not testing
 
     if wandb_logs:
@@ -85,7 +86,7 @@ if __name__ == '__main__':
     print(env.action_space[0])
 
     agent = Agent(n_actions=env.action_space[0].n, input_dims=[4, 84, 84], device=device, num_envs=num_envs,
-                  agent_name=agent_name, total_frames=n_steps, testing=testing, batch_size=bs)
+                  agent_name=agent_name, total_frames=n_steps, testing=testing, batch_size=bs, rr=rr)
 
     if wandb_logs:
         wandb.init(

@@ -33,7 +33,8 @@ class EpsilonGreedy():
 
 
 class Agent():
-    def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=16):
+    def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=16
+                 , rr=1):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -59,13 +60,17 @@ class Agent():
         self.gamma = 0.99
         self.batch_size = batch_size
 
-        self.replay_ratio = 1
+        self.replay_ratio = rr
         self.model_size = 2  # Scaling of IMPALA network
 
         # do not use both spectral and noisy, they will interfere with each other
         self.noisy = False
         self.spectral_norm = True  # this produces nans for some reason! - using torch.autocast('cuda') fixed it?
         # RIP mental sanity
+
+        self.per_splits = 1
+        if self.per_splits > num_envs:
+            self.per_splits = num_envs
 
         self.impala = True #non impala only implemented for iqn
 
@@ -82,7 +87,7 @@ class Agent():
             self.lo = -1
             self.alpha = 0.9
 
-        self.max_mem_size = 1048576
+        self.max_mem_size = 1000000
 
         self.loading_checkpoint = False
         self.viewing_output = False
@@ -108,7 +113,8 @@ class Agent():
             self.trust_regions = False
 
         self.soft_update_tau = 0.001  # 0.001 for non-sample-eff
-        self.replace_target_cnt = 8000  # 32k - # This also needs to be divided by replay_period
+        self.replace_target_cnt = 8000  # This is the number of grad steps - could be a little jank
+        # when changing num_envs/batch size/replay ratio
 
         # NOT IMPLEMENTED
         self.tr_alpha = 1
@@ -222,7 +228,7 @@ class Agent():
 
             if self.eval_mode:
                 for i in range(len(observation)):
-                    if np.random.random() > 0.01:
+                    if np.random.random() > 0.99:
                         x[i] = np.random.choice(self.action_space)
 
             return x
@@ -284,48 +290,52 @@ class Agent():
         else:
             self.soft_update()
 
-        ###########new Replay
+        try:
 
-        #get total priority from each tree
-        buffer_totals = np.empty(self.num_envs, dtype=float)
-        for i in range(self.num_envs):
-            buffer_totals[i] = self.memories[i].transitions.total()
+            # get total priority from each tree
+            buffer_totals = np.empty(self.num_envs, dtype=float)
+            for i in range(self.num_envs):
+                buffer_totals[i] = self.memories[i].transitions.total()
 
-        # create probability distribution based on prios
-        buffer_dist = buffer_totals / buffer_totals.sum()
+            # create probability distribution based on prios
+            buffer_dist = buffer_totals / buffer_totals.sum()
 
-        #sample across them
-        memories_to_sample = np.random.choice(self.num_envs, self.batch_size, p=buffer_dist)
+            if self.per_splits > 1:
+                mems = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)
 
-        # array of how many samples we need from each PER
-        sample_counts = np.bincount(memories_to_sample, minlength=self.num_envs)
+                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mems[0]].sample(
+                    self.batch_size // self.per_splits)
 
-        # get the samples into states, actions, etc
-        idxs_list = []
-        first = True
-        for i in range(self.num_envs):
-            if sample_counts[i] != 0:
+                for i in range(self.per_splits - 1):
 
-                if first:
-                    idxs, states, actions, rewards, next_states, dones, weights = self.memories[i].sample(sample_counts[i])
-                    idxs_list.append(idxs)
-                    first = False
+                    idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[mems[i + 1]].sample(
+                        self.batch_size // self.per_splits)
 
-                else:
-                    idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[i].sample(sample_counts[i])
-
-                    #idxs = np.concatenate((idxs, idxsN))
-                    idxs_list.append(idxsN)
+                    idxs = np.concatenate((idxs, idxsN))
                     states = torch.cat((states, statesN))
                     actions = torch.cat((actions, actionsN))
                     rewards = torch.cat((rewards, rewardsN))
                     next_states = torch.cat((next_states, next_statesN))
                     dones = torch.cat((dones, donesN))
                     weights = torch.cat((weights, weightsN))
-            else:
-                idxs_list.append(None)
 
-        dones = dones.squeeze()
+            else:
+                mem = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)[0]
+                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mem].sample(
+                    self.batch_size)
+
+        except Exception as e:
+            tb = traceback.format_exc()
+            print(tb)
+            print("Infinity Error?")
+            raise Exception("stop")
+            return
+
+        states = states.clone().detach().to(self.net.device)
+        rewards = rewards.clone().detach().to(self.net.device)
+        dones = dones.clone().detach().to(self.net.device).squeeze()
+        actions = actions.clone().detach().to(self.net.device)
+        states_ = next_states.clone().detach().to(self.net.device)
 
         #use this code to check your states are correct
         """
@@ -349,8 +359,8 @@ class Agent():
             state_log_sm_v = F.log_softmax(state_action_values, dim=1)
 
             with torch.no_grad():
-                next_distr_v, next_qvals_v = self.tgt_net.both(next_states)
-                action_distr_v, action_qvals_v = self.net.both(next_states)
+                next_distr_v, next_qvals_v = self.tgt_net.both(states_)
+                action_distr_v, action_qvals_v = self.net.both(states_)
 
                 next_actions_v = action_qvals_v.max(1)[1]
 
@@ -373,8 +383,8 @@ class Agent():
             indices = np.arange(self.batch_size)
 
             q_pred = self.net.forward(states)
-            q_targets = self.tgt_net.forward(next_states)
-            q_actions = self.net.forward(next_states)
+            q_targets = self.tgt_net.forward(states_)
+            q_actions = self.net.forward(states_)
 
             q_pred = q_pred[indices, actions]
 
@@ -390,11 +400,11 @@ class Agent():
 
         elif self.iqn and not self.munchausen:
 
-            Q_targets_next, _ = self.tgt_net(next_states)
+            Q_targets_next, _ = self.tgt_net(states_)
 
             if self.double: #this may be wrong - seems to perform better without. Could just be chance though
                 indices = np.arange(self.batch_size)
-                q_actions = self.net.qvals(next_states)
+                q_actions = self.net.qvals(states_)
                 max_actions = T.argmax(q_actions, dim=1)
                 Q_targets_next = Q_targets_next[indices,: ,max_actions].detach().unsqueeze(1)
             else:
@@ -487,24 +497,13 @@ class Agent():
         if self.grad_steps % 10000 == 0:
             print("Completed " + str(self.grad_steps) + " gradient steps")
 
-        # get individual losses for each PER
-        result_list = []
-        start_idx = 0
-
-        # Split the data tensor into sub-tensors
-        for count in sample_counts:
-            if count > 0:
-                end_idx = start_idx + count
-                sub_tensor = loss_v[start_idx:end_idx]
-                result_list.append(sub_tensor)
-                start_idx = end_idx
-            else:
-                result_list.append(None)
-
-        # update prios for each PER
-        for i in range(self.num_envs):
-            if sample_counts[i] > 0:
-                self.memories[i].update_priorities(idxs_list[i], result_list[i].cpu().detach().numpy())
+        if self.num_envs > 1 and self.per_splits > 1:
+            idxs = np.split(idxs, self.per_splits)
+            loss_v = torch.split(loss_v, self.batch_size // self.per_splits)
+            for i in range(self.per_splits):
+                self.memories[mems[i]].update_priorities(idxs[i], loss_v[i].cpu().detach().numpy())
+        else:
+            self.memories[mem].update_priorities(idxs, loss_v.cpu().detach().numpy())
 
 
 def calculate_huber_loss(td_errors, k=1.0):

@@ -1,1 +1,1 @@
-python main.py "3" "0"
+python main.py "0" "64" "256" "2"
