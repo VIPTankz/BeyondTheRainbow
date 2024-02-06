@@ -607,7 +607,7 @@ class ImpalaCNNLargeIQN(nn.Module):
     Implementation of the large variant of the IMPALA CNN introduced in Espeholt et al. (2018).
     """
     def __init__(self, in_depth, actions, model_size=2, spectral=True, device='cuda:0',
-                 noisy=False, maxpool=False, num_tau=8):
+                 noisy=False, maxpool=False, num_tau=8, maxpool_size=6):
         super().__init__()
 
         self.start = time.time()
@@ -619,6 +619,8 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         self.linear_size = 256
         self.num_tau = num_tau
+
+        self.maxpool_size = maxpool_size
 
         self.n_cos = 64
         self.pis = torch.FloatTensor([np.pi * i for i in range(self.n_cos)]).view(1, 1, self.n_cos).to(device)
@@ -646,18 +648,23 @@ class ImpalaCNNLargeIQN(nn.Module):
         )
 
         if self.maxpool:
-            self.pool = torch.nn.AdaptiveMaxPool2d((8, 8))
-            self.conv_out_size = 2048*model_size
+            self.pool = torch.nn.AdaptiveMaxPool2d((self.maxpool_size, self.maxpool_size))
+            if self.maxpool_size == 8:
+                self.conv_out_size = 2048*model_size
+            elif self.maxpool_size == 6:
+                self.conv_out_size = 1152*model_size
+            else:
+                raise Exception("No Conv out size for this maxpool size")
         else:
             self.conv_out_size = 11520
 
         self.cos_embedding = nn.Linear(self.n_cos, self.conv_out_size)
 
         self.dueling = Dueling(
-            nn.Sequential(linear_layer(2048*model_size, self.linear_size),
+            nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
                           nn.ReLU(),
                           linear_layer(self.linear_size, 1)),
-            nn.Sequential(linear_layer(2048*model_size, self.linear_size),
+            nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
                           nn.ReLU(),
                           linear_layer(self.linear_size, actions))
         )

@@ -1,1 +1,1 @@
-python main.py "0" "64" "128" "1"
+python main.py --bs 64 --rr 4 --maxpool_size 8 --lr 5e-5

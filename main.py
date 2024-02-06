@@ -7,6 +7,7 @@ import torch
 import gymnasium as gym
 import wandb
 import os
+import argparse, sys
 from Agent import Agent
 from torch.profiler import profile, record_function, ProfilerActivity
 def make_env(envs_create):
@@ -16,12 +17,29 @@ def make_env(envs_create):
 
 if __name__ == '__main__':
 
-    envs = int(sys.argv[2])
-    bs = int(sys.argv[3])
-    rr = int(sys.argv[4])
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--game', type=str, default="BattleZone")  # This is BattleZone
+    parser.add_argument('--envs', type=int, default=64)
+    parser.add_argument('--bs', type=int, default=256)  # This is not settled yet
+    parser.add_argument('--rr', type=int, default=1)  # This is not settled yet
 
-    agent_name = "SpeedTests_envs" + str(envs) + "_bs" + str(bs) + "_rr" + str(rr)
-    testing = False
+    parser.add_argument('--maxpool_size', type=int, default=6)
+    parser.add_argument('--lr', type=float, default=4.25e-4)
+
+    args = parser.parse_args()
+
+    game = args.game
+    envs = args.envs
+    bs = args.bs
+    rr = args.rr
+
+    maxpool_size = args.maxpool_size
+    lr = args.lr
+    lr_str = "{:e}".format(lr)
+
+    agent_name = "BTR_" + game + "_bs" + str(bs) + "_rr" + str(rr) + "_mpsize" + str(maxpool_size) + "_lr" + str(lr_str).replace(".", "").replace("0", "")
+    print("Agent Name:" + str(agent_name))
+    testing = True
     wandb_logs = not testing
 
     if wandb_logs:
@@ -68,11 +86,7 @@ if __name__ == '__main__':
 
     next_eval = eval_every
 
-    gameset = ["BattleZone", "NameThisGame", "Phoenix", "DoubleDunk", "Qbert"]
 
-    game_num = int(sys.argv[1])
-
-    game = gameset[game_num]
 
     print("Currently Playing Game: " + str(game))
 
@@ -86,7 +100,8 @@ if __name__ == '__main__':
     print(env.action_space[0])
 
     agent = Agent(n_actions=env.action_space[0].n, input_dims=[4, 84, 84], device=device, num_envs=num_envs,
-                  agent_name=agent_name, total_frames=n_steps, testing=testing, batch_size=bs, rr=rr)
+                  agent_name=agent_name, total_frames=n_steps, testing=testing, batch_size=bs, rr=rr, lr=lr,
+                  maxpool_size=maxpool_size)
 
     if wandb_logs:
         wandb.init(

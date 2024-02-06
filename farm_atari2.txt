@@ -1,1 +1,1 @@
-python main.py "0" "64" "128" "2"
+python main.py --lr 5e-5
