@@ -88,7 +88,7 @@ class Agent():
             self.lo = -1
             self.alpha = 0.9
 
-        self.max_mem_size = 1000000
+        self.max_mem_size = 1048576
 
         self.loading_checkpoint = False
         self.viewing_output = False
