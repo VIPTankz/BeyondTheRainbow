@@ -1,0 +1,31 @@
+diff --git a/Agent.py b/Agent.py
+index a299897..2fe5e02 100644
+--- a/Agent.py
++++ b/Agent.py
+@@ -87,7 +87,7 @@ class Agent():
+             self.lo = -1
+             self.alpha = 0.9
+ 
+-        self.max_mem_size = 1000000
++        self.max_mem_size = 1048576
+ 
+         self.loading_checkpoint = False
+         self.viewing_output = False
+@@ -174,7 +174,7 @@ class Agent():
+             self.tgt_net = NatureIQN(self.input_dims[0], self.n_actions, device=self.device,
+                                      noisy=self.noisy, num_tau=self.num_tau)
+ 
+-        self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr, eps=0.00015)  # 0.005 / self.batch_size
++        self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr, eps=0.005 / self.batch_size)  # 0.00015
+ 
+         self.net.train()
+         #self.tgt_net.train()
+diff --git a/__pycache__/Agent.cpython-311.pyc b/__pycache__/Agent.cpython-311.pyc
+index 6ce69b6..9e4033f 100644
+Binary files a/__pycache__/Agent.cpython-311.pyc and b/__pycache__/Agent.cpython-311.pyc differ
+diff --git a/__pycache__/memory.cpython-311.pyc b/__pycache__/memory.cpython-311.pyc
+index 54d573c..021128e 100644
+Binary files a/__pycache__/memory.cpython-311.pyc and b/__pycache__/memory.cpython-311.pyc differ
+diff --git a/__pycache__/networks.cpython-311.pyc b/__pycache__/networks.cpython-311.pyc
+index 212e03e..54aa9d1 100644
+Binary files a/__pycache__/networks.cpython-311.pyc and b/__pycache__/networks.cpython-311.pyc differ

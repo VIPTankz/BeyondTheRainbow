@@ -1,1 +1,1 @@
-python main.py --lr 5e-5
+python main.py --tr True

@@ -1,1 +1,1 @@
-python main.py --maxpool_size 8
+python main.py --maxpool_size 4

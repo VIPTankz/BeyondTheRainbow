@@ -653,6 +653,8 @@ class ImpalaCNNLargeIQN(nn.Module):
                 self.conv_out_size = 2048*model_size
             elif self.maxpool_size == 6:
                 self.conv_out_size = 1152*model_size
+            elif self.maxpool_size == 4:
+                self.conv_out_size = 512*model_size
             else:
                 raise Exception("No Conv out size for this maxpool size")
         else:

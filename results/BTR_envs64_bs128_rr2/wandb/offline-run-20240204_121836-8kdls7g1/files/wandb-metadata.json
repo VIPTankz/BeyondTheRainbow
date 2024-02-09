@@ -1,0 +1,257 @@
+{
+    "os": "Linux-3.10.0-1160.36.2.el7.x86_64-x86_64-with-glibc2.17",
+    "python": "3.11.7",
+    "heartbeatAt": "2024-02-04T12:18:36.585910",
+    "startedAt": "2024-02-04T12:18:36.351161",
+    "docker": null,
+    "cuda": null,
+    "args": [
+        "0",
+        "64",
+        "128",
+        "2"
+    ],
+    "state": "running",
+    "program": "/mainfs/home/tjc2g19/BeyondTheRainbow/main.py",
+    "codePathLocal": null,
+    "codePath": "main.py",
+    "git": {
+        "remote": "https://github.com/VIPTankz/BeyondTheRainbow.git",
+        "commit": "651a02283159906068331dae59fc8988ef4a0bbe"
+    },
+    "email": null,
+    "root": "/mainfs/home/tjc2g19/BeyondTheRainbow",
+    "host": "indigo59.cluster.local",
+    "username": "tjc2g19",
+    "executable": "/home/tjc2g19/.conda/envs/BTR/bin/python",
+    "cpu_count": 40,
+    "cpu_count_logical": 40,
+    "cpu_freq": {
+        "current": 1361.7367750000003,
+        "min": 1000.0,
+        "max": 2000.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 1050.537,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1002.807,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1023.559,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1082.031,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.122,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1990.844,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1084.594,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1002.441,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1980.468,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.122,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1099.975,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.122,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1099.975,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 999.877,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1195.19,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 2000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1999.877,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 2000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 2000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 2000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 2000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 2000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1999.877,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1999.877,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1965.576,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 2000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 2000.0,
+            "min": 1000.0,
+            "max": 2000.0
+        },
+        {
+            "current": 1090.332,
+            "min": 1000.0,
+            "max": 2000.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 94.28575897216797,
+            "used": 5.382152557373047
+        }
+    },
+    "gpu": "Tesla V100-PCIE-16GB",
+    "gpu_count": 2,
+    "gpu_devices": [
+        {
+            "name": "Tesla V100-PCIE-16GB",
+            "memory_total": 17179869184
+        },
+        {
+            "name": "Tesla V100-PCIE-16GB",
+            "memory_total": 17179869184
+        }
+    ],
+    "memory": {
+        "total": 188.57151794433594
+    }
+}

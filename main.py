@@ -24,7 +24,11 @@ if __name__ == '__main__':
     parser.add_argument('--rr', type=int, default=1)  # This is not settled yet
 
     parser.add_argument('--maxpool_size', type=int, default=6)
-    parser.add_argument('--lr', type=float, default=4.25e-4)
+    parser.add_argument('--lr', type=float, default=5e-5)
+    parser.add_argument('--testing', type=bool, default=False)
+    parser.add_argument('--ema', type=bool, default=False)
+    parser.add_argument('--tr', type=bool, default=False)
+    parser.add_argument('--c', type=int, default=8000)  # this is the target replace
 
     args = parser.parse_args()
 
@@ -32,14 +36,16 @@ if __name__ == '__main__':
     envs = args.envs
     bs = args.bs
     rr = args.rr
+    ema = args.ema
+    tr = args.tr
+    c = args.c
 
     maxpool_size = args.maxpool_size
     lr = args.lr
-    lr_str = "{:e}".format(lr)
 
-    agent_name = "BTR_" + game + "_bs" + str(bs) + "_rr" + str(rr) + "_mpsize" + str(maxpool_size) + "_lr" + str(lr_str).replace(".", "").replace("0", "")
+    agent_name = "BTR_" + "mpsize" + str(maxpool_size) + "_ema" + str(ema) + "_tr" + str(tr) + "_C" + str(c)
     print("Agent Name:" + str(agent_name))
-    testing = True
+    testing = args.testing
     wandb_logs = not testing
 
     if wandb_logs:
@@ -77,6 +83,7 @@ if __name__ == '__main__':
         eval_every = 20000
         num_eval_episodes = 10
         n_steps = 100000
+        bs = 16
     else:
         num_envs = envs
         eval_envs = 8
@@ -85,8 +92,6 @@ if __name__ == '__main__':
         eval_every = 1000000
 
     next_eval = eval_every
-
-
 
     print("Currently Playing Game: " + str(game))
 
@@ -101,7 +106,7 @@ if __name__ == '__main__':
 
     agent = Agent(n_actions=env.action_space[0].n, input_dims=[4, 84, 84], device=device, num_envs=num_envs,
                   agent_name=agent_name, total_frames=n_steps, testing=testing, batch_size=bs, rr=rr, lr=lr,
-                  maxpool_size=maxpool_size)
+                  maxpool_size=maxpool_size, ema=ema, trust_regions=tr, target_replace=c)
 
     if wandb_logs:
         wandb.init(
@@ -232,6 +237,9 @@ if __name__ == '__main__':
                         evals.append(eval_scores[i])
 
                         eval_scores[i] = 0
+
+                    if len(evals) == num_eval_episodes:
+                        break
 
                 eval_observation = eval_observation_
 

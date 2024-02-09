@@ -1,0 +1,22 @@
+diff --git a/__pycache__/Agent.cpython-311.pyc b/__pycache__/Agent.cpython-311.pyc
+index d10d18b..385e8e4 100644
+Binary files a/__pycache__/Agent.cpython-311.pyc and b/__pycache__/Agent.cpython-311.pyc differ
+diff --git a/__pycache__/memory.cpython-311.pyc b/__pycache__/memory.cpython-311.pyc
+index 54d573c..021128e 100644
+Binary files a/__pycache__/memory.cpython-311.pyc and b/__pycache__/memory.cpython-311.pyc differ
+diff --git a/__pycache__/networks.cpython-311.pyc b/__pycache__/networks.cpython-311.pyc
+index e597254..f38a827 100644
+Binary files a/__pycache__/networks.cpython-311.pyc and b/__pycache__/networks.cpython-311.pyc differ
+diff --git a/main.py b/main.py
+index dd95468..e769143 100644
+--- a/main.py
++++ b/main.py
+@@ -39,7 +39,7 @@ if __name__ == '__main__':
+ 
+     agent_name = "BTR_" + game + "_bs" + str(bs) + "_rr" + str(rr) + "_mpsize" + str(maxpool_size) + "_lr" + str(lr_str).replace(".", "").replace("0", "")
+     print("Agent Name:" + str(agent_name))
+-    testing = True
++    testing = False
+     wandb_logs = not testing
+ 
+     if wandb_logs:

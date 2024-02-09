@@ -34,7 +34,7 @@ class EpsilonGreedy():
 
 class Agent():
     def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=16
-                 , rr=1, maxpool_size=6, lr=5e-5):
+                 , rr=1, maxpool_size=6, lr=5e-5, ema=False, trust_regions=False, target_replace=8000):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -66,14 +66,14 @@ class Agent():
 
         # do not use both spectral and noisy, they will interfere with each other
         self.noisy = False
-        self.spectral_norm = True  # this produces nans for some reason! - using torch.autocast('cuda') fixed it?
-        # RIP mental sanity
+        self.spectral_norm = True  # rememberance of the bug that passed gpu tensor into env
+        # and caused nans which somehow showed up in the PER sample function.
 
         self.per_splits = 1
         if self.per_splits > num_envs:
             self.per_splits = num_envs
 
-        self.impala = True #non impala only implemented for iqn
+        self.impala = True  # non impala only implemented for iqn
 
         # Don't use both of these, they are mutually exclusive
         self.c51 = False
@@ -88,6 +88,7 @@ class Agent():
             self.lo = -1
             self.alpha = 0.9
 
+        # 1 Million rounded to the nearest power of 2 for tree implementation
         self.max_mem_size = 1048576
 
         self.loading_checkpoint = False
@@ -100,7 +101,12 @@ class Agent():
             self.per_beta = 0.4
 
         # target_net, ema, trust_region
-        self.stabiliser = "target_net"
+        if ema:
+            self.stabiliser = "ema"
+        elif trust_regions:
+            self.stabiliser = "trust_regions"
+        else:
+            self.stabiliser = "target"
 
         if self.stabiliser == "ema":
             self.soft_updates = True
@@ -110,14 +116,14 @@ class Agent():
         # NOT IMPLEMENTED
         if self.stabiliser == "trust_regions":
             self.trust_regions = True
+            self.running_std = -999
         else:
             self.trust_regions = False
 
         self.soft_update_tau = 0.001  # 0.001 for non-sample-eff
-        self.replace_target_cnt = 8000  # This is the number of grad steps - could be a little jank
+        self.replace_target_cnt = target_replace  # This is the number of grad steps - could be a little jank
         # when changing num_envs/batch size/replay ratio
 
-        # NOT IMPLEMENTED
         self.tr_alpha = 1
         self.tr_period = 1500
 
@@ -286,59 +292,55 @@ class Agent():
         self.optimizer.zero_grad()
 
         if not self.soft_updates:
-            if self.grad_steps % self.replace_target_cnt == 0:
-                self.replace_target_network()
+            if self.trust_regions:
+                if self.grad_steps % self.tr_period == 0:
+                    self.replace_target_network()
+            else:
+                if self.grad_steps % self.replace_target_cnt == 0:
+                    self.replace_target_network()
         else:
             self.soft_update()
 
-        try:
+        # get total priority from each tree
+        buffer_totals = np.empty(self.num_envs, dtype=float)
+        for i in range(self.num_envs):
+            buffer_totals[i] = self.memories[i].transitions.total()
 
-            # get total priority from each tree
-            buffer_totals = np.empty(self.num_envs, dtype=float)
-            for i in range(self.num_envs):
-                buffer_totals[i] = self.memories[i].transitions.total()
+        # create probability distribution based on prios
+        buffer_dist = buffer_totals / buffer_totals.sum()
 
-            # create probability distribution based on prios
-            buffer_dist = buffer_totals / buffer_totals.sum()
+        if self.per_splits > 1:
+            mems = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)
 
-            if self.per_splits > 1:
-                mems = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)
+            idxs, states, actions, rewards, next_states, dones, weights = self.memories[mems[0]].sample(
+                self.batch_size // self.per_splits)
 
-                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mems[0]].sample(
+            for i in range(self.per_splits - 1):
+
+                idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[mems[i + 1]].sample(
                     self.batch_size // self.per_splits)
 
-                for i in range(self.per_splits - 1):
+                idxs = np.concatenate((idxs, idxsN))
+                states = torch.cat((states, statesN))
+                actions = torch.cat((actions, actionsN))
+                rewards = torch.cat((rewards, rewardsN))
+                next_states = torch.cat((next_states, next_statesN))
+                dones = torch.cat((dones, donesN))
+                weights = torch.cat((weights, weightsN))
 
-                    idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[mems[i + 1]].sample(
-                        self.batch_size // self.per_splits)
+        else:
+            # this is a slight simplification of PER, but runs MUCH faster with very little memory
+            mem = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)[0]
+            idxs, states, actions, rewards, next_states, dones, weights = self.memories[mem].sample(
+                self.batch_size)
 
-                    idxs = np.concatenate((idxs, idxsN))
-                    states = torch.cat((states, statesN))
-                    actions = torch.cat((actions, actionsN))
-                    rewards = torch.cat((rewards, rewardsN))
-                    next_states = torch.cat((next_states, next_statesN))
-                    dones = torch.cat((dones, donesN))
-                    weights = torch.cat((weights, weightsN))
+        #states = states.clone().detach().to(self.net.device)
+        #rewards = rewards.clone().detach().to(self.net.device)
+        dones = dones.squeeze()
+        #actions = actions.clone().detach().to(self.net.device)
+        #states_ = next_states.clone().detach().to(self.net.device)
 
-            else:
-                mem = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)[0]
-                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mem].sample(
-                    self.batch_size)
-
-        except Exception as e:
-            tb = traceback.format_exc()
-            print(tb)
-            print("Infinity Error?")
-            raise Exception("stop")
-            return
-
-        states = states.clone().detach().to(self.net.device)
-        rewards = rewards.clone().detach().to(self.net.device)
-        dones = dones.clone().detach().to(self.net.device).squeeze()
-        actions = actions.clone().detach().to(self.net.device)
-        states_ = next_states.clone().detach().to(self.net.device)
-
-        #use this code to check your states are correct
+        # use this code to check your states are correct
         """
         plt.imshow(states[0][0].unsqueeze(dim=0).cpu().permute(1, 2, 0))
         plt.show()
@@ -360,8 +362,8 @@ class Agent():
             state_log_sm_v = F.log_softmax(state_action_values, dim=1)
 
             with torch.no_grad():
-                next_distr_v, next_qvals_v = self.tgt_net.both(states_)
-                action_distr_v, action_qvals_v = self.net.both(states_)
+                next_distr_v, next_qvals_v = self.tgt_net.both(next_states)
+                action_distr_v, action_qvals_v = self.net.both(next_states)
 
                 next_actions_v = action_qvals_v.max(1)[1]
 
@@ -384,8 +386,8 @@ class Agent():
             indices = np.arange(self.batch_size)
 
             q_pred = self.net.forward(states)
-            q_targets = self.tgt_net.forward(states_)
-            q_actions = self.net.forward(states_)
+            q_targets = self.tgt_net.forward(next_states)
+            q_actions = self.net.forward(next_states)
 
             q_pred = q_pred[indices, actions]
 
@@ -401,11 +403,14 @@ class Agent():
 
         elif self.iqn and not self.munchausen:
 
-            Q_targets_next, _ = self.tgt_net(states_)
+            if self.trust_regions:
+                Q_targets_next, _ = self.net(next_states)
+            else:
+                Q_targets_next, _ = self.tgt_net(next_states)
 
             if self.double: #this may be wrong - seems to perform better without. Could just be chance though
                 indices = np.arange(self.batch_size)
-                q_actions = self.net.qvals(states_)
+                q_actions = self.net.qvals(next_states)
                 max_actions = T.argmax(q_actions, dim=1)
                 Q_targets_next = Q_targets_next[indices,: ,max_actions].detach().unsqueeze(1)
             else:
@@ -427,16 +432,20 @@ class Agent():
             # Quantile Huber loss
             td_error = Q_targets - Q_expected
             loss_v = torch.abs(td_error).sum(dim=1).mean(dim=1).data
-            assert td_error.shape == (self.batch_size, self.num_tau, self.num_tau), "wrong td error shape"
+            #assert td_error.shape == (self.batch_size, self.num_tau, self.num_tau), "wrong td error shape"
             huber_l = calculate_huber_loss(td_error, 1.0)
             quantil_l = abs(taus - (td_error.detach() < 0).float()) * huber_l / 1.0
 
             loss = quantil_l.sum(dim=1).mean(dim=1, keepdim=True)  # , keepdim=True if per weights get multipl
             loss = loss * weights.to(self.net.device)
+            self.calculate_trust_regions()
             loss = loss.mean()
 
         elif self.iqn and self.munchausen:
-            Q_targets_next, _ = self.tgt_net(next_states)
+            if self.trust_regions:
+                Q_targets_next, _ = self.net(next_states)
+            else:
+                Q_targets_next, _ = self.tgt_net(next_states)
             Q_targets_next = Q_targets_next.detach()  # (batch, num_tau, actions)
             q_t_n = Q_targets_next.mean(dim=1)
 
@@ -485,6 +494,10 @@ class Agent():
 
             loss = quantil_l.sum(dim=1).mean(dim=1, keepdim=True)  # , keepdim=True if per weights get multipl
             loss = loss * weights.to(self.net.device)
+
+            if self.trust_regions:
+                loss = self.calculate_trust_regions(loss, loss_v, states, actions, Q_expected, Q_targets)
+
             loss = loss.mean()
 
         loss.backward()
@@ -505,6 +518,60 @@ class Agent():
                 self.memories[mems[i]].update_priorities(idxs[i], loss_v[i].cpu().detach().numpy())
         else:
             self.memories[mem].update_priorities(idxs, loss_v.cpu().detach().numpy())
+
+    def calculate_trust_regions(self, loss, loss_v, states, actions, Q_expected, Q_targets):
+        with torch.no_grad():
+            if self.running_std != -999:
+                current_std = torch.std(loss_v).item()
+                self.running_std += current_std
+
+                q_k_tgt_net, taus = self.tgt_net(states)
+                target_network_pred = q_k_tgt_net.gather(2,
+                                                         actions.unsqueeze(-1).expand(self.batch_size, self.num_tau, 1))
+
+                # get average across quantiles
+                target_pred_mean = target_network_pred.mean(dim=1)
+                Q_expected_mean = Q_expected.mean(dim=1)
+
+                # q_targets has shape (bs, 1, num_taus), so need to squeeze
+                Q_targets_mean = Q_targets.squeeze().mean(dim=1).unsqueeze(1)
+
+                #  sigma_j calculations
+                sigma_j = self.running_std / self.grad_steps
+
+                sigma_j = max(sigma_j, current_std)
+                sigma_j = max(sigma_j, 0.01)
+
+                # These all need shape checking
+                outside_region = torch.abs(Q_expected_mean - target_pred_mean) > \
+                                 self.tr_alpha * sigma_j
+
+                diff_sign = torch.sign(Q_expected_mean - target_pred_mean) != \
+                            torch.sign(Q_expected_mean - Q_targets_mean)
+
+                # create mask if conditions are true
+                mask = torch.logical_and(outside_region, diff_sign)
+                loss[mask] = 0
+
+                # Some Testing Code
+                """
+                if np.random.random() > 0.995:
+                    print("Mask")
+                    print(mask)
+
+                    # mask out losses
+                    loss[mask] = 0
+                    print(loss)
+
+                    print(Q_expected_mean)
+
+                    x = input(";lol")
+                """
+                return loss
+
+            else:
+                self.running_std = torch.std(loss_v).detach().cpu()
+                return loss
 
 
 def calculate_huber_loss(td_errors, k=1.0):
