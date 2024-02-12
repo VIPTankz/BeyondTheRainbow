@@ -438,7 +438,8 @@ class Agent():
 
             loss = quantil_l.sum(dim=1).mean(dim=1, keepdim=True)  # , keepdim=True if per weights get multipl
             loss = loss * weights.to(self.net.device)
-            self.calculate_trust_regions()
+            if self.trust_regions:
+                loss = self.calculate_trust_regions(loss, loss_v, states, actions, Q_expected, Q_targets)
             loss = loss.mean()
 
         elif self.iqn and self.munchausen:
