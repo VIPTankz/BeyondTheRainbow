@@ -1,1 +1,1 @@
-python main.py --ema True
+python main.py --lr 2.5e-4

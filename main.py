@@ -26,7 +26,7 @@ if __name__ == '__main__':
     parser.add_argument('--maxpool_size', type=int, default=6)
     parser.add_argument('--lr', type=float, default=5e-5)
     parser.add_argument('--testing', type=bool, default=False)
-    parser.add_argument('--ema', type=bool, default=False)
+    parser.add_argument('--ema', type=bool, default=True)
     parser.add_argument('--tr', type=bool, default=False)
     parser.add_argument('--c', type=int, default=8000)  # this is the target replace
 
@@ -42,8 +42,9 @@ if __name__ == '__main__':
 
     maxpool_size = args.maxpool_size
     lr = args.lr
+    lr_str = "{:e}".format(lr)
 
-    agent_name = "BTR_" + "mpsize" + str(maxpool_size) + "_ema" + str(ema) + "_tr" + str(tr) + "_C" + str(c)
+    agent_name = "BTR_ema" + str(ema) + "_tr" + str(tr) + "_C" + str(c) + "_lr" + str(lr_str).replace(".", "").replace("0", "")
     print("Agent Name:" + str(agent_name))
     testing = args.testing
     wandb_logs = not testing

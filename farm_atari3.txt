@@ -1,1 +1,1 @@
-python main.py --c 32000
+python main.py --lr 1e-5

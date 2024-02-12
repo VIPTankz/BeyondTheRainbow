@@ -447,6 +447,7 @@ class Agent():
                 Q_targets_next, _ = self.net(next_states)
             else:
                 Q_targets_next, _ = self.tgt_net(next_states)
+
             Q_targets_next = Q_targets_next.detach()  # (batch, num_tau, actions)
             q_t_n = Q_targets_next.mean(dim=1)
 
