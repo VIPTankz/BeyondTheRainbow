@@ -2,10 +2,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 games = ["BattleZone"]
-files = ["BTR_mpsize4_emaFalse_trFalse_C8000", "BTR_bs256_rr1_mpsize6_lr5e-5",
-         "BTR_envs64_bs256_rr1"]
+files = ["BTR_emaTrue_trFalse_C8000_lr25e-4", "BTR_emaTrue_trFalse_C8000_lr1e-4",
+         "BTR_bs256_rr1_mpsize6_lr5e-5","BTR_emaTrue_trFalse_C8000_lr25e-5"]
 
-filenames = ["MP4", "MP6", "MP8"]
+filenames = ["2.5e-4", "1e-4", "5e-5", "2.5e-5"]
 
 combined_data = []
 for file in files:

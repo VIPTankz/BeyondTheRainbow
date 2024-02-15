@@ -34,7 +34,7 @@ class EpsilonGreedy():
 
 class Agent():
     def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=16
-                 , rr=1, maxpool_size=6, lr=5e-5, ema=False, trust_regions=False, target_replace=8000):
+                 , rr=1, maxpool_size=6, lr=5e-5, ema=False, trust_regions=False, target_replace=8000, ema_tau=0.001):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -120,7 +120,7 @@ class Agent():
         else:
             self.trust_regions = False
 
-        self.soft_update_tau = 0.001  # 0.001 for non-sample-eff
+        self.soft_update_tau = ema_tau  # 0.001 for non-sample-eff
         self.replace_target_cnt = target_replace  # This is the number of grad steps - could be a little jank
         # when changing num_envs/batch size/replay ratio
 

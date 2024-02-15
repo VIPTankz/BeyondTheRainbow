@@ -1,1 +1,1 @@
-python main.py --lr 1e-5
+python main.py --ema_tau 2.5e-4
