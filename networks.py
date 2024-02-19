@@ -194,6 +194,11 @@ class Dueling(nn.Module):
         value = self.value_branch(x)
         return value + (advantages - torch.mean(advantages, dim=1, keepdim=True))
 
+    def reset_noise(self):
+        self.value_branch[0].reset_noise()
+        self.value_branch[2].reset_noise()
+        self.advantage_branch[0].reset_noise()
+        self.advantage_branch[2].reset_noise()
 
 class DuelingAlt(nn.Module):
     """ The dueling branch used in all nets that use dueling-dqn. """
@@ -364,44 +369,79 @@ class ImpalaCNNBlock(nn.Module):
         return x
 
 
-class ImpalaCNNLargeOld(nn.Module):
+"""
+self.input_dims[0], self.n_actions, atoms=self.N_ATOMS, Vmin=self.Vmin, Vmax=self.Vmax,
+                                             device=self.device, noisy=self.noisy, spectral=self.spectral_norm, c51=self.c51,
+                                          maxpool=self.maxpool, model_size=self.model_size
+                                          
+TODO
+Need to move these arguments into this model
+"""
+
+class ImpalaCNNLarge(nn.Module):
     """
     Implementation of the large variant of the IMPALA CNN introduced in Espeholt et al. (2018).
+    No IQN or C51
     """
-    def __init__(self, in_depth, actions, model_size=2
-                 , spectral_norm='all'):
+    def __init__(self, in_depth, actions, model_size=2, spectral=True, noisy=False, maxpool=True, maxpool_size=6, device='cuda:0'):
         super().__init__()
 
         self.start = time.time()
         self.model_size = model_size
         self.actions = actions
+        self.maxpool = maxpool
+        self.maxpool_size = maxpool_size
+        self.device = device
+
+        if noisy:
+            linear_layer = NoisyLinear
+        else:
+            linear_layer = nn.Linear
 
         def identity(p): return p
 
-        norm_func = torch.nn.utils.spectral_norm if (spectral_norm == 'all') else identity
-        norm_func_last = torch.nn.utils.spectral_norm if (spectral_norm == 'last' or spectral_norm == 'all') else identity
+        norm_func = torch.nn.utils.spectral_norm if spectral else identity
 
         self.main = nn.Sequential(
             ImpalaCNNBlock(in_depth, 16*model_size, norm_func=norm_func),
             ImpalaCNNBlock(16*model_size, 32*model_size, norm_func=norm_func),
-            ImpalaCNNBlock(32*model_size, 32*model_size, norm_func=norm_func_last),
+            ImpalaCNNBlock(32*model_size, 32*model_size, norm_func=norm_func),
             nn.ReLU()
         )
 
-        self.pool = torch.nn.AdaptiveMaxPool2d((8, 8))
+        if self.maxpool:
+            self.pool = torch.nn.AdaptiveMaxPool2d((self.maxpool_size, self.maxpool_size))
+            if self.maxpool_size == 8:
+                self.conv_out_size = 2048*model_size
+            elif self.maxpool_size == 6:
+                self.conv_out_size = 1152*model_size
+            elif self.maxpool_size == 4:
+                self.conv_out_size = 512*model_size
+            else:
+                raise Exception("No Conv out size for this maxpool size")
+        else:
+            self.conv_out_size = 11520
 
         self.dueling = Dueling(
-            nn.Sequential(nn.Linear(2048*model_size, 256),
+            nn.Sequential(linear_layer(self.conv_out_size, 256),
                           nn.ReLU(),
-                          nn.Linear(256, 1)),
-            nn.Sequential(nn.Linear(2048*model_size, 256),
+                          linear_layer(256, 1)),
+            nn.Sequential(linear_layer(self.conv_out_size, 256),
                           nn.ReLU(),
-                          nn.Linear(256, actions))
+                          linear_layer(256, actions))
         )
+
+        self.to(device)
 
     def _get_conv_out(self, shape):
         o = self.main(torch.zeros(1, *shape))
         return int(np.prod(o.size()))
+
+    def reset_noise(self):
+        self.dueling.reset_noise()
+
+    def qvals(self, x, advantages_only=False):
+        return self.forward(x, advantages_only)
 
     def forward(self, x, advantages_only=False):
         x = x.float() / 256
@@ -413,7 +453,9 @@ class ImpalaCNNLargeOld(nn.Module):
             raise Exception("stop")"""
 
         f = self.main(x)
-        f = self.pool(f)
+        if self.maxpool:
+            f = self.pool(f)
+
         return self.dueling(f, advantages_only=advantages_only)
 
     def save_checkpoint(self):
@@ -462,12 +504,13 @@ class NoisyLinear(nn.Module):
     else:
       return F.linear(input, self.weight_mu, self.bias_mu)
 
-class ImpalaCNNLarge(nn.Module):
+class ImpalaCNNLargeC51(nn.Module):
     """
     Implementation of the large variant of the IMPALA CNN introduced in Espeholt et al. (2018).
+    No IQN
     """
     def __init__(self, in_depth, actions, model_size=2, spectral=True, atoms=51, Vmin=-10, Vmax=10, device='cuda:0',
-                 noisy=False, c51=False, maxpool=False, iqn=False):
+                 noisy=False, maxpool=False):
         super().__init__()
 
         self.start = time.time()
@@ -481,9 +524,6 @@ class ImpalaCNNLarge(nn.Module):
         self.maxpool = maxpool
         if not self.c51:
             self.atoms = 1
-
-        if self.iqn:
-            pass
 
         if spectral:
             spectral_norm = 'all'
@@ -670,22 +710,11 @@ class ImpalaCNNLargeIQN(nn.Module):
                           nn.ReLU(),
                           linear_layer(self.linear_size, actions))
         )
-        """
-        if not self.noisy:
-            self.fc1 = nn.Linear(self.conv_out_size, self.linear_size)
-            self.fc2 = nn.Linear(self.linear_size, self.actions)
-
-        else:
-            self.fc1 = NoisyLinear(self.conv_out_size, self.linear_size)
-            self.fc2 = NoisyLinear(self.linear_size, self.actions)
-        """
 
         self.to(device)
 
     def reset_noise(self):
-        for name, module in self.named_children():
-            if 'fc' in name:
-                module.reset_noise()
+        self.dueling.reset_noise()
 
     def _get_conv_out(self, shape):
         o = self.conv(torch.zeros(1, *shape))

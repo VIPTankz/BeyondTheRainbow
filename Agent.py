@@ -34,7 +34,8 @@ class EpsilonGreedy():
 
 class Agent():
     def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=16
-                 , rr=1, maxpool_size=6, lr=5e-5, ema=False, trust_regions=False, target_replace=8000, ema_tau=0.001):
+                 , rr=1, maxpool_size=6, lr=5e-5, ema=False, trust_regions=False, target_replace=8000, ema_tau=0.001,
+                 noisy=False, spectral=True, munch=True, iqn=True, double=False):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -65,8 +66,8 @@ class Agent():
         self.maxpool_size = maxpool_size
 
         # do not use both spectral and noisy, they will interfere with each other
-        self.noisy = False
-        self.spectral_norm = True  # rememberance of the bug that passed gpu tensor into env
+        self.noisy = noisy
+        self.spectral_norm = spectral  # rememberance of the bug that passed gpu tensor into env
         # and caused nans which somehow showed up in the PER sample function.
 
         self.per_splits = 1
@@ -77,11 +78,11 @@ class Agent():
 
         # Don't use both of these, they are mutually exclusive
         self.c51 = False
-        self.iqn = True
+        self.iqn = iqn
 
-        self.double = False  # Not implemented for IQN and Munchausen
+        self.double = double  # Not implemented for IQN and Munchausen
         self.maxpool = True
-        self.munchausen = True
+        self.munchausen = munch
 
         if self.munchausen:
             self.entropy_tau = 0.03
@@ -161,13 +162,11 @@ class Agent():
 
         if self.impala:
             if not self.iqn:
-                self.net = ImpalaCNNLarge(self.input_dims[0], self.n_actions, atoms=self.N_ATOMS, Vmin=self.Vmin, Vmax=self.Vmax,
-                                             device=self.device, noisy=self.noisy, spectral=self.spectral_norm, c51=self.c51,
-                                          maxpool=self.maxpool, model_size=self.model_size)
+                self.net = ImpalaCNNLarge(self.input_dims[0], self.n_actions,spectral=self.spectral_norm, device=self.device,
+                                             noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, maxpool_size=self.maxpool_size)
 
-                self.tgt_net = ImpalaCNNLarge(self.input_dims[0], self.n_actions, atoms=self.N_ATOMS, Vmin=self.Vmin, Vmax=self.Vmax,
-                                                 device=self.device, noisy=self.noisy, spectral=self.spectral_norm,
-                                              c51=self.c51, maxpool=self.maxpool, model_size=self.model_size)
+                self.tgt_net = ImpalaCNNLarge(self.input_dims[0], self.n_actions,spectral=self.spectral_norm, device=self.device,
+                                             noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, maxpool_size=self.maxpool_size)
             else:
                 self.net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions,spectral=self.spectral_norm, device=self.device,
                                              noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size)
@@ -382,12 +381,17 @@ class Agent():
 
             loss = loss_v.mean()
 
-        elif not self.iqn:
+        elif not self.iqn and not self.c51:  # non distributional
+            # trust regions not implemented
+
             indices = np.arange(self.batch_size)
 
             q_pred = self.net.forward(states)
             q_targets = self.tgt_net.forward(next_states)
-            q_actions = self.net.forward(next_states)
+            if self.double:
+                q_actions = self.net.forward(next_states)
+            else:
+                q_actions = q_targets.clone().detach()
 
             q_pred = q_pred[indices, actions]
 
@@ -397,9 +401,46 @@ class Agent():
 
                 q_target = rewards + (self.gamma ** self.n) * q_targets[indices, max_actions]
 
+            # loss_v should be absolute error for PER
             td_error = q_target - q_pred
-            loss_v = (td_error.pow(2) * weights.to(self.net.device))
-            loss = loss_v.mean().to(self.net.device)
+            loss_v = torch.abs(td_error)
+
+            loss_squared = (td_error.pow(2) * weights.to(self.net.device))
+
+            loss = loss_squared.mean().to(self.net.device)
+
+        elif not self.iqn and not self.c51 and self.munchausen:  # non-distributional and munchausen
+
+            Q_targets_next = self.tgt_net.forward(next_states)
+
+            logsum = torch.logsumexp((Q_targets_next - Q_targets_next.max(1)[0].unsqueeze(-1)) / self.entropy_tau, 1).unsqueeze(-1)
+
+            tau_log_pi_next = Q_targets_next - Q_targets_next.max(1)[0].unsqueeze(-1) - self.entropy_tau * logsum
+
+            # target policy
+            pi_target = F.softmax(Q_targets_next / self.entropy_tau, dim=1)
+            Q_target = (self.gamma * (pi_target * (Q_targets_next - tau_log_pi_next) * (1 - dones)).sum(1)).unsqueeze(-1)
+
+            # calculate munchausen addon with logsum trick
+            q_k_targets = self.tgt_net(states).detach()
+            v_k_target = q_k_targets.max(1)[0].unsqueeze(-1)
+            logsum = torch.logsumexp((q_k_targets - v_k_target) / self.entropy_tau, 1).unsqueeze(-1)
+            log_pi = q_k_targets - v_k_target - self.entropy_tau * logsum
+            munchausen_addon = log_pi.gather(1, actions)
+
+            # calc munchausen reward:
+            munchausen_reward = (rewards + self.alpha * torch.clamp(munchausen_addon, min=self.lo, max=0))
+
+            Q_targets = munchausen_reward + Q_target
+
+            q_k = self.net(states)
+            Q_expected = q_k.gather(1, actions)
+
+            td_error = Q_targets - Q_expected
+            loss_v = torch.abs(td_error)
+
+            loss_squared = (td_error.pow(2) * weights.to(self.net.device))
+            loss = loss_squared.mean().to(self.net.device)
 
         elif self.iqn and not self.munchausen:
 
