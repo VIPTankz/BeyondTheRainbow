@@ -1,1 +1,1 @@
-python main.py --ema_tau 5e-3
+python main.py --munch 0

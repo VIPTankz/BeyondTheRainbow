@@ -1,1 +1,1 @@
-python main.py --ema_tau 5e-4
+python main.py --double 1

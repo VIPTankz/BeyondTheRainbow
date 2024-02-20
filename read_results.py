@@ -2,14 +2,14 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 games = ["BattleZone"]
-files = ["BTR_emaTrue_trFalse_C8000_lr1e-4", "BTR_ema_tau5e-3"]
+files = ["BTR_ema_tau5e-4", "BTR_ema_tau25e-4", "BTR_emaTrue_trFalse_C8000_lr1e-4", "BTR_ema_tau25e-3", "BTR_ema_tau5e-3"]
 
-filenames = ["1e-3", "5e-3"]
+filenames = ["5e-4", "2.5e-4", "1e-3", "2.5e-3", "5e-3"]
 
 combined_data = []
 for file in files:
     # Load the combined data from the file
-    combined_data.append(np.load("results\\" + file + "\\" + file + "BattleZoneEvaluation.npy"))
+    combined_data.append(np.load("results\\" + file + "\\" + file + "BattleZoneEvaluation.npy")) # [:36] # add this for incomplete results
     print(np.load("results\\" + file + "\\" + file + "BattleZoneEvaluation.npy").shape)
 
 combined_data = np.array(combined_data)

@@ -1,1 +1,1 @@
-python main.py --ema_tau 2.5e-3
+python main.py --iqn 0

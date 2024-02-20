@@ -27,7 +27,7 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--testing', type=bool, default=False)
     parser.add_argument('--ema', type=bool, default=True)
-    parser.add_argument('--ema_tau', type=float, default=0.001) # THIS NEEDS CHANGING BASED ON PRIOR RESULTS
+    parser.add_argument('--ema_tau', type=float, default=2.5e-4)
     parser.add_argument('--tr', type=bool, default=False)
     parser.add_argument('--c', type=int, default=8000)  # this is the target replace
 
@@ -62,7 +62,7 @@ if __name__ == '__main__':
     # str(tau_str).replace(".", "").replace("0", "")
 
     agent_name = "BTR_noisy" + str(noisy) + "_spectral" + str(spectral) + "_munch" + str(munch) + "_iqn" + str(iqn) + \
-            "_double" + str(double) + "_ema_tau" + str(ema_tau)
+            "_double" + str(double)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
