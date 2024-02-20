@@ -61,7 +61,9 @@ if __name__ == '__main__':
     # tau_str = "{:e}".format(ema_tau)
     # str(tau_str).replace(".", "").replace("0", "")
 
-    agent_name = "BTR_noisy" + str(noisy) + "_spectral" + str(spectral) + "_munch" + str(munch) + "_iqn" + str(iqn) + "_double" + str(double)
+    agent_name = "BTR_noisy" + str(noisy) + "_spectral" + str(spectral) + "_munch" + str(munch) + "_iqn" + str(iqn) + \
+            "_double" + str(double) + "_ema_tau" + str(ema_tau)
+
     print("Agent Name:" + str(agent_name))
     testing = args.testing
     wandb_logs = not testing
