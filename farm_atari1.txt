@@ -1,1 +1,1 @@
-python main.py --iqn 0
+python main.py --dueling 0

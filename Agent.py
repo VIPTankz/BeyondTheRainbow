@@ -35,7 +35,7 @@ class EpsilonGreedy():
 class Agent():
     def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=16
                  , rr=1, maxpool_size=6, lr=5e-5, ema=False, trust_regions=False, target_replace=8000, ema_tau=0.001,
-                 noisy=False, spectral=True, munch=True, iqn=True, double=False):
+                 noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.99):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -58,7 +58,7 @@ class Agent():
             self.lr = lr
 
         self.n = 3
-        self.gamma = 0.99
+        self.gamma = discount
         self.batch_size = batch_size
 
         self.replay_ratio = rr
@@ -74,7 +74,8 @@ class Agent():
         if self.per_splits > num_envs:
             self.per_splits = num_envs
 
-        self.impala = True  # non impala only implemented for iqn
+        self.impala = impala  # non impala only implemented for iqn
+        self.dueling = dueling
 
         # Don't use both of these, they are mutually exclusive
         self.c51 = False
@@ -168,11 +169,14 @@ class Agent():
                 self.tgt_net = ImpalaCNNLarge(self.input_dims[0], self.n_actions,spectral=self.spectral_norm, device=self.device,
                                              noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, maxpool_size=self.maxpool_size)
             else:
-                self.net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions,spectral=self.spectral_norm, device=self.device,
-                                             noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size)
+                # This is the BTR Network
+                self.net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions, spectral=self.spectral_norm, device=self.device,
+                                             noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size,
+                                             dueling=dueling)
 
                 self.tgt_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions,spectral=self.spectral_norm, device=self.device,
-                                             noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size)
+                                             noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size,
+                                                 dueling=dueling)
         else:
             self.net = NatureIQN(self.input_dims[0], self.n_actions, device=self.device,
                                      noisy=self.noisy, num_tau=self.num_tau)

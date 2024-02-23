@@ -1,1 +1,1 @@
-python main.py --double 1
+python main.py --impala 1

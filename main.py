@@ -38,6 +38,11 @@ if __name__ == '__main__':
     parser.add_argument('--iqn', type=int, default=1)
     parser.add_argument('--double', type=int, default=0)
 
+    parser.add_argument('--dueling', type=int, default=1)
+    parser.add_argument('--impala', type=int, default=1)
+
+    parser.add_argument('--discount', type=float, default=0.99)
+
     args = parser.parse_args()
 
     game = args.game
@@ -58,11 +63,15 @@ if __name__ == '__main__':
     iqn = args.iqn
     double = args.double
 
+    dueling = args.dueling
+    impala = args.impala
+    discount = args.discount
+
     # tau_str = "{:e}".format(ema_tau)
     # str(tau_str).replace(".", "").replace("0", "")
 
     agent_name = "BTR_noisy" + str(noisy) + "_spectral" + str(spectral) + "_munch" + str(munch) + "_iqn" + str(iqn) + \
-            "_double" + str(double)
+            "_dueling" + str(dueling) + "_impala" + str(impala) + "_discount" + str(discount).replace(".", "")
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -127,7 +136,8 @@ if __name__ == '__main__':
     agent = Agent(n_actions=env.action_space[0].n, input_dims=[4, 84, 84], device=device, num_envs=num_envs,
                   agent_name=agent_name, total_frames=n_steps, testing=testing, batch_size=bs, rr=rr, lr=lr,
                   maxpool_size=maxpool_size, ema=ema, trust_regions=tr, target_replace=c, ema_tau=ema_tau,
-                  noisy=noisy, spectral=spectral, munch=munch, iqn=iqn, double=double)
+                  noisy=noisy, spectral=spectral, munch=munch, iqn=iqn, double=double, dueling=dueling, impala=impala,
+                  discount=discount)
 
     if wandb_logs:
         wandb.init(

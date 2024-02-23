@@ -102,7 +102,7 @@ class NatureIQN(nn.Module):
             nn.ReLU(),
         )
 
-        self.conv_out_size = 4480
+        self.conv_out_size = 3136
 
         self.cos_embedding = nn.Linear(self.n_cos, self.conv_out_size)
 
@@ -152,7 +152,7 @@ class NatureIQN(nn.Module):
 
         return out.view(batch_size, self.num_tau, self.actions), taus
 
-    def qvals(self, inputs):
+    def qvals(self, inputs, advantages_only=None):
         quantiles, _ = self.forward(inputs)
         actions = quantiles.mean(dim=1)
         return actions
@@ -647,7 +647,7 @@ class ImpalaCNNLargeIQN(nn.Module):
     Implementation of the large variant of the IMPALA CNN introduced in Espeholt et al. (2018).
     """
     def __init__(self, in_depth, actions, model_size=2, spectral=True, device='cuda:0',
-                 noisy=False, maxpool=False, num_tau=8, maxpool_size=6):
+                 noisy=False, maxpool=False, num_tau=8, maxpool_size=6, dueling=True):
         super().__init__()
 
         self.start = time.time()
@@ -656,6 +656,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         self.device = device
         self.noisy = noisy
         self.maxpool = maxpool
+        self.dueling = dueling
 
         self.linear_size = 256
         self.num_tau = num_tau
@@ -702,14 +703,21 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         self.cos_embedding = nn.Linear(self.n_cos, self.conv_out_size)
 
-        self.dueling = Dueling(
-            nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
-                          nn.ReLU(),
-                          linear_layer(self.linear_size, 1)),
-            nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
-                          nn.ReLU(),
-                          linear_layer(self.linear_size, actions))
-        )
+        if self.dueling:
+            self.dueling = Dueling(
+                nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
+                              nn.ReLU(),
+                              linear_layer(self.linear_size, 1)),
+                nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
+                              nn.ReLU(),
+                              linear_layer(self.linear_size, actions))
+            )
+        else:
+            self.linear_layers = nn.Sequential(
+                linear_layer(self.conv_out_size, self.linear_size),
+                nn.ReLU(),
+                linear_layer(self.linear_size, actions)
+            )
 
         self.to(device)
 
@@ -753,7 +761,11 @@ class ImpalaCNNLargeIQN(nn.Module):
         #print(x.device)
         #x = torch.relu(self.fc1(x))
         #out = self.fc2(x)
-        out = self.dueling(x, advantages_only=advantages_only)
+        if self.dueling:
+            out = self.dueling(x, advantages_only=advantages_only)
+        else:
+            out = self.linear_layers(x)
+
         #print(out.device)
 
         return out.view(batch_size, self.num_tau, self.actions), taus
