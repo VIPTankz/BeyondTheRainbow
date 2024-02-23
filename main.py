@@ -26,9 +26,9 @@ if __name__ == '__main__':
     parser.add_argument('--maxpool_size', type=int, default=6)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--testing', type=bool, default=False)
-    parser.add_argument('--ema', type=bool, default=True)
+    parser.add_argument('--ema', type=int, default=1)
     parser.add_argument('--ema_tau', type=float, default=2.5e-4)
-    parser.add_argument('--tr', type=bool, default=False)
+    parser.add_argument('--tr', type=int, default=0)
     parser.add_argument('--c', type=int, default=8000)  # this is the target replace
 
     # the way parser.add_argument handles bools in dumb so we use int 0 or 1 instead

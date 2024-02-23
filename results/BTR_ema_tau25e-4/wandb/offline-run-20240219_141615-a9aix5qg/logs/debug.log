@@ -22,3 +22,9 @@ config: {'agent_name': 'BTR_ema_tau25e-4', 'game': 'BattleZone', 'steps': 500000
 2024-02-19 14:16:33,353 INFO    MainThread:76908 [wandb_run.py:_redirect():2153] Wrapping output streams.
 2024-02-19 14:16:33,353 INFO    MainThread:76908 [wandb_run.py:_redirect():2178] Redirects installed.
 2024-02-19 14:16:33,354 INFO    MainThread:76908 [wandb_init.py:init():847] run started, returning control to user process
+2024-02-21 00:08:51,953 INFO    MainThread:76908 [wandb_run.py:_finish():1962] finishing run BeyondTheRainbow/a9aix5qg
+2024-02-21 00:08:51,953 INFO    MainThread:76908 [wandb_run.py:_atexit_cleanup():2202] got exitcode: 0
+2024-02-21 00:08:51,953 INFO    MainThread:76908 [wandb_run.py:_restore():2185] restore
+2024-02-21 00:08:51,953 INFO    MainThread:76908 [wandb_run.py:_restore():2191] restore done
+2024-02-21 00:08:53,184 INFO    MainThread:76908 [wandb_run.py:_footer_history_summary_info():3857] rendering history
+2024-02-21 00:08:53,185 INFO    MainThread:76908 [wandb_run.py:_footer_history_summary_info():3889] rendering summary
