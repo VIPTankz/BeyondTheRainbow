@@ -35,7 +35,8 @@ class EpsilonGreedy():
 class Agent():
     def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=16
                  , rr=1, maxpool_size=6, lr=5e-5, ema=False, trust_regions=False, target_replace=8000, ema_tau=0.001,
-                 noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.99):
+                 noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.99,
+                 adamw=False, ede=False, sqrt=False):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -80,6 +81,10 @@ class Agent():
         # Don't use both of these, they are mutually exclusive
         self.c51 = False
         self.iqn = iqn
+
+        self.ede = ede  # NOT FINISHED
+        self.adamw = adamw
+        self.sqrt = sqrt
 
         self.double = double  # Not implemented for IQN and Munchausen
         self.maxpool = True
@@ -172,11 +177,11 @@ class Agent():
                 # This is the BTR Network
                 self.net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions, spectral=self.spectral_norm, device=self.device,
                                              noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size,
-                                             dueling=dueling)
+                                             dueling=dueling, sqrt=self.sqrt)
 
                 self.tgt_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions,spectral=self.spectral_norm, device=self.device,
                                              noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size,
-                                                 dueling=dueling)
+                                                 dueling=dueling, sqrt=self.sqrt)
         else:
             self.net = NatureIQN(self.input_dims[0], self.n_actions, device=self.device,
                                      noisy=self.noisy, num_tau=self.num_tau)
@@ -184,7 +189,11 @@ class Agent():
             self.tgt_net = NatureIQN(self.input_dims[0], self.n_actions, device=self.device,
                                      noisy=self.noisy, num_tau=self.num_tau)
 
-        self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr, eps=0.005 / self.batch_size)  # 0.00015
+        if self.adamw:
+            self.optimizer = optim.AdamW(self.net.parameters(), lr=self.lr, eps=0.005 / self.batch_size,
+                                         weight_decay=1e-4)  # weight decay taken from museli
+        else:
+            self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr, eps=0.005 / self.batch_size)  # 0.00015
 
         self.net.train()
         #self.tgt_net.train()
@@ -227,10 +236,16 @@ class Agent():
             state = T.tensor(observation, dtype=T.float).to(self.net.device)
             #state = state.cuda()
             qvals = self.net.qvals(state, advantages_only=True)
+
+            if self.ede:
+                # may need to review advantages only!
+                eps_var = self.net.get_bootstrapped_uncertainty()
+                qvals = qvals + 30 * eps_var
+
             x = T.argmax(qvals, dim=1).cpu()
             # this should contain (num_envs) different actions
 
-            if not self.noisy and not self.eval_mode:
+            if not self.noisy and not self.eval_mode and not self.ede:
                 for i in range(len(observation)):
                     action = self.epsilon.choose_action()
                     if action is not None:

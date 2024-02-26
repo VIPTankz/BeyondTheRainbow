@@ -41,7 +41,11 @@ if __name__ == '__main__':
     parser.add_argument('--dueling', type=int, default=1)
     parser.add_argument('--impala', type=int, default=1)
 
-    parser.add_argument('--discount', type=float, default=0.99)
+    parser.add_argument('--discount', type=float, default=0.997)
+
+    parser.add_argument('--adamw', type=int, default=0)
+    parser.add_argument('--sqrt', type=int, default=0)
+    parser.add_argument('--ede', type=int, default=0)
 
     args = parser.parse_args()
 
@@ -67,11 +71,15 @@ if __name__ == '__main__':
     impala = args.impala
     discount = args.discount
 
+    adamw = args.adamw
+    sqrt = args.sqrt
+    ede = args.ede
+
     # tau_str = "{:e}".format(ema_tau)
     # str(tau_str).replace(".", "").replace("0", "")
 
-    agent_name = "BTR_noisy" + str(noisy) + "_spectral" + str(spectral) + "_munch" + str(munch) + "_iqn" + str(iqn) + \
-            "_dueling" + str(dueling) + "_impala" + str(impala) + "_discount" + str(discount).replace(".", "")
+    agent_name = "BTR_adamw" + str(adamw) + "_sqrt" + str(sqrt) + "_ede" + str(ede) + "_discount" +\
+                 str(discount).replace(".", "")
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -137,7 +145,7 @@ if __name__ == '__main__':
                   agent_name=agent_name, total_frames=n_steps, testing=testing, batch_size=bs, rr=rr, lr=lr,
                   maxpool_size=maxpool_size, ema=ema, trust_regions=tr, target_replace=c, ema_tau=ema_tau,
                   noisy=noisy, spectral=spectral, munch=munch, iqn=iqn, double=double, dueling=dueling, impala=impala,
-                  discount=discount)
+                  discount=discount, adamw=adamw, ede=ede, sqrt=sqrt)
 
     if wandb_logs:
         wandb.init(

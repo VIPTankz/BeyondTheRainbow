@@ -647,7 +647,7 @@ class ImpalaCNNLargeIQN(nn.Module):
     Implementation of the large variant of the IMPALA CNN introduced in Espeholt et al. (2018).
     """
     def __init__(self, in_depth, actions, model_size=2, spectral=True, device='cuda:0',
-                 noisy=False, maxpool=False, num_tau=8, maxpool_size=6, dueling=True):
+                 noisy=False, maxpool=False, num_tau=8, maxpool_size=6, dueling=True, sqrt=False):
         super().__init__()
 
         self.start = time.time()
@@ -657,6 +657,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         self.noisy = noisy
         self.maxpool = maxpool
         self.dueling = dueling
+        self.sqrt = sqrt
 
         self.linear_size = 256
         self.num_tau = num_tau
@@ -766,6 +767,9 @@ class ImpalaCNNLargeIQN(nn.Module):
         else:
             out = self.linear_layers(x)
 
+        if self.sqrt:
+            out = torch.square(out)
+
         #print(out.device)
 
         return out.view(batch_size, self.num_tau, self.actions), taus
@@ -773,9 +777,12 @@ class ImpalaCNNLargeIQN(nn.Module):
     #@torch.autocast('cuda')
     def qvals(self, inputs, advantages_only=False):
         quantiles, _ = self.forward(inputs, advantages_only)
-        #print(quantiles.device)
+
+        # this is for ede only
+        self.quantiles = quantiles.detach()
+
         actions = quantiles.mean(dim=1)
-        #print(actions.device)
+
         return actions
 
     def calc_cos(self, batch_size, n_tau=8):
@@ -787,6 +794,13 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         #assert cos.shape == (batch_size, n_tau, self.n_cos), "cos shape is incorrect"
         return cos, taus
+
+    def get_bootstrapped_uncertainty(self):
+        # needs to do minibatch from multiple heads [M]
+        # self.quantiles should be [num_envs, taus, actions]
+        eps_var = torch.var(self.quantiles, dim=1)  # [num_envs, tau, action]
+        eps_var = torch.mean(eps_var, dim=1, keepdim=True)  # [B, action]
+        return eps_var
 
     def save_checkpoint(self, name):
         #print('... saving checkpoint ...')
