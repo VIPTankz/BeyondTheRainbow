@@ -1,1 +1,1 @@
-python main.py --noisy 1 --spectral 0
+python main.py --adamw 1
