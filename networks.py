@@ -768,7 +768,9 @@ class ImpalaCNNLargeIQN(nn.Module):
             out = self.linear_layers(x)
 
         if self.sqrt:
-            out = torch.square(out)
+            # square the Q-values but keep the sign
+            squared_tensor = torch.square(out)
+            out = squared_tensor * torch.sign(out)
 
         #print(out.device)
 
