@@ -1,1 +1,1 @@
-python main.py --impala 1
+python main.py --discount_anneal 1

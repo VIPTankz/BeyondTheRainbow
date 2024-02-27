@@ -32,17 +32,31 @@ class EpsilonGreedy():
             return np.random.choice(self.action_space)
 
 
-class Agent():
+class Agent:
     def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=16
                  , rr=1, maxpool_size=6, lr=5e-5, ema=False, trust_regions=False, target_replace=8000, ema_tau=0.001,
                  noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.99,
-                 adamw=False, ede=False, sqrt=False):
+                 adamw=False, ede=False, sqrt=False, discount_anneal=False):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
         self.device = device
         self.agent_name = agent_name
         self.testing = testing
+
+        self.loading_checkpoint = False
+
+        if not self.loading_checkpoint:
+            self.per_beta = 0.4
+
+        # this is wrong please fix!
+        self.replay_ratio = rr
+        self.total_frames = total_frames
+        self.num_envs = num_envs
+
+        self.total_grad_steps = self.total_frames / (self.num_envs / self.replay_ratio)
+
+        self.priority_weight_increase = (1 - self.per_beta) / self.total_grad_steps
 
         self.action_space = [i for i in range(self.n_actions)]
         self.learn_step_counter = 0
@@ -59,10 +73,17 @@ class Agent():
             self.lr = lr
 
         self.n = 3
-        self.gamma = discount
+        if discount_anneal:
+            self.discount_anneal = True
+            self.gamma = 0.97
+            self.final_gamma = 0.997
+            self.annealing_period = self.total_grad_steps // 2  # first half of training
+            self.gamma_inc = (self.final_gamma - self.gamma) / self.annealing_period
+        else:
+            self.gamma = discount
+            self.discount_anneal = False
         self.batch_size = batch_size
 
-        self.replay_ratio = rr
         self.model_size = 2  # Scaling of IMPALA network
         self.maxpool_size = maxpool_size
 
@@ -97,15 +118,6 @@ class Agent():
 
         # 1 Million rounded to the nearest power of 2 for tree implementation
         self.max_mem_size = 1048576
-
-        self.loading_checkpoint = False
-        self.viewing_output = False
-
-        self.total_frames = int(total_frames / num_envs)  # This needs to be divided by replay_period
-        # this is the number of gradient steps! not number of frames
-
-        if not self.loading_checkpoint:
-            self.per_beta = 0.4
 
         # target_net, ema, trust_region
         if ema:
@@ -161,7 +173,7 @@ class Agent():
 
             self.epsilon = EpsilonGreedy(self.eps_start, self.eps_steps, self.eps_final, self.action_space)
 
-        self.num_envs = num_envs
+
         self.memories = []
         for i in range(num_envs):
             self.memories.append(ReplayMemory(self.max_mem_size // num_envs, self.n, self.gamma, device, alpha=self.per_alpha, beta=self.per_beta))
@@ -177,11 +189,11 @@ class Agent():
                 # This is the BTR Network
                 self.net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions, spectral=self.spectral_norm, device=self.device,
                                              noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size,
-                                             dueling=dueling, sqrt=self.sqrt)
+                                             dueling=dueling, sqrt=self.sqrt, ede=self.ede)
 
                 self.tgt_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions,spectral=self.spectral_norm, device=self.device,
                                              noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size,
-                                                 dueling=dueling, sqrt=self.sqrt)
+                                                 dueling=dueling, sqrt=self.sqrt, ede=self.ede)
         else:
             self.net = NatureIQN(self.input_dims[0], self.n_actions, device=self.device,
                                      noisy=self.noisy, num_tau=self.num_tau)
@@ -210,9 +222,6 @@ class Agent():
         if self.loading_checkpoint:
             self.load_models()
 
-        self.total_grad_steps = self.total_frames / (self.num_envs / self.replay_ratio)
-
-        self.priority_weight_increase = (1 - self.per_beta) / self.total_grad_steps
 
     def get_grad_steps(self):
         return self.grad_steps
@@ -232,14 +241,21 @@ class Agent():
             if self.noisy:
                 self.net.reset_noise()
 
+            if self.ede:
+                advantages = True
+            else:
+                advantages = False
+
             #state = T.tensor(np.array(list(observation)), dtype=T.float).to(self.net.device)
             state = T.tensor(observation, dtype=T.float).to(self.net.device)
             #state = state.cuda()
-            qvals = self.net.qvals(state, advantages_only=True)
+            qvals = self.net.qvals(state, advantages_only=advantages)
 
             if self.ede:
                 # may need to review advantages only!
                 eps_var = self.net.get_bootstrapped_uncertainty()
+                eps_var = torch.sqrt(eps_var)
+                eps_var = eps_var * torch.randn(eps_var.shape, device=eps_var.device)
                 qvals = qvals + 30 * eps_var
 
             x = T.argmax(qvals, dim=1).cpu()
@@ -306,6 +322,11 @@ class Agent():
 
         for i in range(self.num_envs):
             self.memories[i].priority_weight = min(self.memories[i].priority_weight + self.priority_weight_increase, 1)
+
+        if self.discount_anneal:
+            self.gamma = min(self.gamma + self.gamma_inc, self.final_gamma)
+            for i in self.memories:
+                i.discount = self.gamma
 
         self.optimizer.zero_grad()
 

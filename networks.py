@@ -647,7 +647,7 @@ class ImpalaCNNLargeIQN(nn.Module):
     Implementation of the large variant of the IMPALA CNN introduced in Espeholt et al. (2018).
     """
     def __init__(self, in_depth, actions, model_size=2, spectral=True, device='cuda:0',
-                 noisy=False, maxpool=False, num_tau=8, maxpool_size=6, dueling=True, sqrt=False):
+                 noisy=False, maxpool=False, num_tau=8, maxpool_size=6, dueling=True, sqrt=False, ede=False):
         super().__init__()
 
         self.start = time.time()
@@ -658,6 +658,9 @@ class ImpalaCNNLargeIQN(nn.Module):
         self.maxpool = maxpool
         self.dueling = dueling
         self.sqrt = sqrt
+        self.ede = ede
+        if self.ede:
+            self.ede_num_layers = 5
 
         self.linear_size = 256
         self.num_tau = num_tau
@@ -704,7 +707,22 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         self.cos_embedding = nn.Linear(self.n_cos, self.conv_out_size)
 
-        if self.dueling:
+        if self.ede:
+            self.ede_layers = []
+            for i in range(self.ede_num_layers):
+                self.ede_layers.append(Dueling(
+                    nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
+                                  nn.ReLU(),
+                                  linear_layer(self.linear_size, 1)),
+                    nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
+                                  nn.ReLU(),
+                                  linear_layer(self.linear_size, actions))
+                ))
+
+            for i in self.ede_layers:
+                i.to(device)
+
+        elif self.dueling:
             self.dueling = Dueling(
                 nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
                               nn.ReLU(),
@@ -719,6 +737,7 @@ class ImpalaCNNLargeIQN(nn.Module):
                 nn.ReLU(),
                 linear_layer(self.linear_size, actions)
             )
+
 
         self.to(device)
 
@@ -759,10 +778,17 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         # x has shape (batch, layer_size) for multiplication –> reshape to (batch, 1, layer)
         x = (x.unsqueeze(1) * cos_x).view(batch_size * self.num_tau, self.conv_out_size)
-        #print(x.device)
-        #x = torch.relu(self.fc1(x))
-        #out = self.fc2(x)
-        if self.dueling:
+
+        if self.ede:
+            outs = []
+            for i in range(self.ede_num_layers):
+                outs.append(self.ede_layers[i](x, advantages_only=advantages_only).view(batch_size, self.num_tau, self.actions))
+
+            self.quantiles = torch.stack(outs, dim=0)  # should have shape (heads, bs, taus, actions)
+            out = self.quantiles.mean(dim=0)
+            #self.quantiles.detach()
+
+        elif self.dueling:
             out = self.dueling(x, advantages_only=advantages_only)
         else:
             out = self.linear_layers(x)
@@ -774,14 +800,14 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         #print(out.device)
 
-        return out.view(batch_size, self.num_tau, self.actions), taus
+        if not self.ede:
+            return out.view(batch_size, self.num_tau, self.actions), taus
+        else:
+            return out, taus
 
     #@torch.autocast('cuda')
     def qvals(self, inputs, advantages_only=False):
         quantiles, _ = self.forward(inputs, advantages_only)
-
-        # this is for ede only
-        self.quantiles = quantiles.detach()
 
         actions = quantiles.mean(dim=1)
 
@@ -799,9 +825,10 @@ class ImpalaCNNLargeIQN(nn.Module):
 
     def get_bootstrapped_uncertainty(self):
         # needs to do minibatch from multiple heads [M]
-        # self.quantiles should be [num_envs, taus, actions]
-        eps_var = torch.var(self.quantiles, dim=1)  # [num_envs, tau, action]
-        eps_var = torch.mean(eps_var, dim=1, keepdim=True)  # [B, action]
+        # self.quantiles should be [heads, num_envs, taus, actions]
+        eps_var = torch.permute(self.quantiles, (1, 0, 2, 3))  # [num_envs, heads, taus, actions]
+        eps_var = torch.var(eps_var, dim=1)  # [num_envs, tau, action]
+        eps_var = torch.mean(eps_var, dim=1)  # [B, action]
         return eps_var
 
     def save_checkpoint(self, name):

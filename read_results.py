@@ -2,10 +2,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 games = ["BattleZone"]
-files = ["BTR_ema_tau25e-4", "BTR_noisy0_spectral1_munch1_iqn0_double0", "BTR_noisy0_spectral1_munch0_iqn1_double0",
-         "BTR_noisy1_spectral0_munch1_iqn1_dueling1_impala1_discount099"]
+files = ["BTR_discount099_avg", "BTR_noisy0_spectral1_munch1_iqn0_double0", "BTR_noisy0_spectral1_munch0_iqn1_double0",
+         "BTR_noisy1_spectral0_munch1_iqn1_dueling1_impala1_discount099", "BTR_noisy0_spectral1_munch1_iqn1_dueling0_impala1_discount099",
+         "BTR_noisy0_spectral1_munch1_iqn1_dueling1_impala1_discount0997"]
 
-filenames = ["BTR", "-IQN", "-Munchausen", "+Noisy -Spectral"]
+filenames = ["BTR", "-IQN", "-Munchausen", "+Noisy -Spectral", "-Dueling", "Discount=0.997"]
 
 combined_data = []
 for file in files:

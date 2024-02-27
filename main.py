@@ -47,6 +47,8 @@ if __name__ == '__main__':
     parser.add_argument('--sqrt', type=int, default=0)
     parser.add_argument('--ede', type=int, default=0)
 
+    parser.add_argument('--discount_anneal', type=int, default=0)
+
     args = parser.parse_args()
 
     game = args.game
@@ -75,11 +77,13 @@ if __name__ == '__main__':
     sqrt = args.sqrt
     ede = args.ede
 
+    discount_anneal = args.discount_anneal
+
     # tau_str = "{:e}".format(ema_tau)
     # str(tau_str).replace(".", "").replace("0", "")
 
     agent_name = "BTR_adamw" + str(adamw) + "_sqrt" + str(sqrt) + "_ede" + str(ede) + "_discount" +\
-                 str(discount).replace(".", "")
+                 str(discount).replace(".", "") + "_discount_anneal" + str(discount_anneal)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -145,7 +149,7 @@ if __name__ == '__main__':
                   agent_name=agent_name, total_frames=n_steps, testing=testing, batch_size=bs, rr=rr, lr=lr,
                   maxpool_size=maxpool_size, ema=ema, trust_regions=tr, target_replace=c, ema_tau=ema_tau,
                   noisy=noisy, spectral=spectral, munch=munch, iqn=iqn, double=double, dueling=dueling, impala=impala,
-                  discount=discount, adamw=adamw, ede=ede, sqrt=sqrt)
+                  discount=discount, adamw=adamw, ede=ede, sqrt=sqrt, discount_anneal=discount_anneal)
 
     if wandb_logs:
         wandb.init(
