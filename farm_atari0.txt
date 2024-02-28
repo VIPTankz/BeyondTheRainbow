@@ -1,1 +1,1 @@
-python main.py --adamw 1
+python main.py --ede 1
