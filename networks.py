@@ -345,12 +345,6 @@ class ImpalaCNNBlock(nn.Module):
 
     #@torch.autocast('cuda')
     def forward(self, x):
-        #print("Conv Layer Block before")
-        #print(x.abs().sum().item())
-        #print("-------------------")
-        #print(x.type)
-        #print(self.conv)
-        #print(self.conv.dtype)
         x = self.conv(x)
         #if x.abs().sum().item() == 0:
         #raise Exception("Tensor output all zeros")
