@@ -48,6 +48,7 @@ if __name__ == '__main__':
     parser.add_argument('--ede', type=int, default=0)
 
     parser.add_argument('--discount_anneal', type=int, default=0)
+    parser.add_argument('--lr_decay', type=int, default=0)
 
     args = parser.parse_args()
 
@@ -76,6 +77,7 @@ if __name__ == '__main__':
     adamw = args.adamw
     sqrt = args.sqrt
     ede = args.ede
+    lr_decay = args.lr_decay
 
     discount_anneal = args.discount_anneal
 
@@ -83,7 +85,7 @@ if __name__ == '__main__':
     # str(tau_str).replace(".", "").replace("0", "")
 
     agent_name = "BTR_adamw" + str(adamw) + "_sqrt" + str(sqrt) + "_ede" + str(ede) + "_discount" +\
-                 str(discount).replace(".", "") + "_discount_anneal" + str(discount_anneal)
+                 str(discount).replace(".", "") + "_discount_anneal" + str(discount_anneal) + "_lr_decay" + str(lr_decay)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -149,7 +151,7 @@ if __name__ == '__main__':
                   agent_name=agent_name, total_frames=n_steps, testing=testing, batch_size=bs, rr=rr, lr=lr,
                   maxpool_size=maxpool_size, ema=ema, trust_regions=tr, target_replace=c, ema_tau=ema_tau,
                   noisy=noisy, spectral=spectral, munch=munch, iqn=iqn, double=double, dueling=dueling, impala=impala,
-                  discount=discount, adamw=adamw, ede=ede, sqrt=sqrt, discount_anneal=discount_anneal)
+                  discount=discount, adamw=adamw, ede=ede, sqrt=sqrt, discount_anneal=discount_anneal, lr_decay=lr_decay)
 
     if wandb_logs:
         wandb.init(

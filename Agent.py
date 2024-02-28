@@ -36,7 +36,7 @@ class Agent:
     def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=16
                  , rr=1, maxpool_size=6, lr=5e-5, ema=False, trust_regions=False, target_replace=8000, ema_tau=0.001,
                  noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.99,
-                 adamw=False, ede=False, sqrt=False, discount_anneal=False):
+                 adamw=False, ede=False, sqrt=False, discount_anneal=False, lr_decay=False):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -60,6 +60,10 @@ class Agent:
 
         self.action_space = [i for i in range(self.n_actions)]
         self.learn_step_counter = 0
+
+        self.lr_decay = lr_decay
+        if self.lr_decay:
+            self.lambda_lr = lambda frame: max(1.0 - frame / total_frames, 0)
 
         self.chkpt_dir = ""
 
@@ -213,6 +217,9 @@ class Agent:
         for param in self.tgt_net.parameters():
             param.requires_grad = False
 
+        if self.lr_decay:
+            self.scheduler = optim.lr_scheduler.LambdaLR(self.optimizer, lr_lambda=self.lambda_lr)
+
         self.env_steps = 0
         self.grad_steps = 0
 
@@ -276,7 +283,6 @@ class Agent:
 
     def store_transition(self, state, action, reward, done, stream, prio=None):
         if prio is None:
-
             self.memories[stream].append(torch.from_numpy(state), action, reward, done)
         else:
             self.memories[stream].append(torch.from_numpy(state), action, reward, done, 0)
@@ -586,6 +592,9 @@ class Agent:
         loss.backward()
         T.nn.utils.clip_grad_norm_(self.net.parameters(), 10)
         self.optimizer.step()
+
+        if self.lr_decay:
+            self.scheduler.step()
 
         if not self.noisy:
             self.epsilon.update_eps()
