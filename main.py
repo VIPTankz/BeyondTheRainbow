@@ -253,7 +253,8 @@ if __name__ == '__main__':
             print("Evaluating")
 
             fname = agent_name + game + "Experiment.npy"
-            np.save(fname, np.array(scores))
+            if not testing:
+                np.save(fname, np.array(scores))
 
             eval_env = make_env(eval_envs)
 
@@ -294,7 +295,8 @@ if __name__ == '__main__':
 
             evals_total.append(evals)
             fname = agent_name + game + "Evaluation.npy"
-            np.save(fname, np.array(evals_total))
+            if not testing:
+                np.save(fname, np.array(evals_total))
             next_eval += eval_every
             agent.set_train_mode()
 
