@@ -4,19 +4,20 @@ from read_rainbow import get_rainbow, get_dqn
 import matplotlib.patheffects as pe
 
 games = ["BattleZone"]
-"""files = ["BTR_discount099_avg", "BTR_noisy0_spectral1_munch1_iqn0_double0", "BTR_noisy0_spectral1_munch0_iqn1_double0",
+files = ["BTR_discount099_avg", "BTR_adamw0_sqrt1_ede0_discount0997", "BTR_noisy0_spectral1_munch1_iqn0_double0", "BTR_noisy0_spectral1_munch0_iqn1_double0",
          "BTR_noisy1_spectral0_munch1_iqn1_dueling1_impala1_discount099", "BTR_noisy0_spectral1_munch1_iqn1_dueling0_impala1_discount099",
          "BTR_noisy0_spectral1_munch1_iqn1_dueling1_impala1_discount0997", "BTR_adamw1_sqrt0_ede0_discount0997"]
 
-filenames = ["BTR", "-IQN", "-Munchausen", "+Noisy -Spectral", "-Dueling", "Discount=0.997", "Discount+WeightDecay",
-             "Rainbow*", "DQN"]"""
+filenames = ["BTR", "Discount+SQRT", "-IQN", "-Munchausen", "+Noisy -Spectral", "-Dueling", "Discount=0.997", "Discount+WeightDecay",
+             "Rainbow*", "DQN"]
 
+"""
 files = ["BTR_adamw1_sqrt0_ede0_discount0997", "BTR_noisy0_spectral1_munch1_iqn0_double0", "BTR_discount099_avg",
          "BTR_noisy1_spectral0_munch1_iqn1_dueling1_impala1_discount099", ]
 
 filenames = ["Beyond The Rainbow", "-IQN", "-Weight Decay", "-Spectral Normalization",
              "Rainbow*", "DQN"]
-
+"""
 combined_data = []
 for file in files:
     # Load the combined data from the file

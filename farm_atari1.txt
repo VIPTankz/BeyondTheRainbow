@@ -1,1 +1,1 @@
-python main.py --sqrt 1
+python main.py --sqrt 1 --adamw 1
