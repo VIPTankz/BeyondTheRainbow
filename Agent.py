@@ -249,9 +249,9 @@ class Agent:
                 self.net.reset_noise()
 
             if self.ede:
-                advantages = True
-            else:
                 advantages = False
+            else:
+                advantages = True
 
             #state = T.tensor(np.array(list(observation)), dtype=T.float).to(self.net.device)
             state = T.tensor(observation, dtype=T.float).to(self.net.device)
@@ -259,11 +259,13 @@ class Agent:
             qvals = self.net.qvals(state, advantages_only=advantages)
 
             if self.ede:
-                # may need to review advantages only!
+                # 0.2 here is the args.ubc_c parameters from their code.
+                # they use 0.2 for custom bootstrapping. These at least empircally seems to make the
+                # most sense as it adds a reasonable amount to the qvals (not completely overpowering)
                 eps_var = self.net.get_bootstrapped_uncertainty()
                 eps_var = torch.sqrt(eps_var)
                 eps_var = eps_var * torch.randn(eps_var.shape, device=eps_var.device)
-                qvals = qvals + 30 * eps_var
+                qvals = qvals + 0.2 * eps_var
 
             x = T.argmax(qvals, dim=1).cpu()
             # this should contain (num_envs) different actions
