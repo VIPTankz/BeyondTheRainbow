@@ -6,6 +6,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from memory import ReplayMemory
+from ExperienceReplay import RegularReplayMemory
 import numpy as np
 from collections import deque
 import pickle
@@ -33,10 +34,10 @@ class EpsilonGreedy():
 
 
 class Agent:
-    def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=16
+    def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=256
                  , rr=1, maxpool_size=6, lr=5e-5, ema=False, trust_regions=False, target_replace=8000, ema_tau=0.001,
                  noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.99,
-                 adamw=False, ede=False, sqrt=False, discount_anneal=False, lr_decay=False):
+                 adamw=False, ede=False, sqrt=False, discount_anneal=False, lr_decay=False, per=True, taus=8):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -153,7 +154,7 @@ class Agent:
         self.loss_type = "huber"  # NOT IMPLEMENTED
 
         if self.iqn:
-            self.num_tau = 8
+            self.num_tau = taus
 
         self.per_alpha = 0.2
         if self.loading_checkpoint:
@@ -177,10 +178,15 @@ class Agent:
 
             self.epsilon = EpsilonGreedy(self.eps_start, self.eps_steps, self.eps_final, self.action_space)
 
+        self.per = per
 
         self.memories = []
-        for i in range(num_envs):
-            self.memories.append(ReplayMemory(self.max_mem_size // num_envs, self.n, self.gamma, device, alpha=self.per_alpha, beta=self.per_beta))
+        if self.per:
+            for i in range(num_envs):
+                self.memories.append(ReplayMemory(self.max_mem_size // num_envs, self.n, self.gamma, device, alpha=self.per_alpha, beta=self.per_beta))
+        else:
+            for i in range(num_envs):
+                self.memories.append(RegularReplayMemory(self.max_mem_size // num_envs, self.n, self.gamma, device))
 
         if self.impala:
             if not self.iqn:
@@ -328,8 +334,9 @@ class Agent:
         if self.env_steps < self.min_sampling_size:
             return
 
-        for i in range(self.num_envs):
-            self.memories[i].priority_weight = min(self.memories[i].priority_weight + self.priority_weight_increase, 1)
+        if self.per:
+            for i in range(self.num_envs):
+                self.memories[i].priority_weight = min(self.memories[i].priority_weight + self.priority_weight_increase, 1)
 
         if self.discount_anneal:
             self.gamma = min(self.gamma + self.gamma_inc, self.final_gamma)
@@ -348,44 +355,69 @@ class Agent:
         else:
             self.soft_update()
 
-        # get total priority from each tree
-        buffer_totals = np.empty(self.num_envs, dtype=float)
-        for i in range(self.num_envs):
-            buffer_totals[i] = self.memories[i].transitions.total()
+        if self.per:
+            # get total priority from each tree
+            buffer_totals = np.empty(self.num_envs, dtype=float)
+            for i in range(self.num_envs):
+                buffer_totals[i] = self.memories[i].transitions.total()
 
-        # create probability distribution based on prios
-        buffer_dist = buffer_totals / buffer_totals.sum()
+            # create probability distribution based on prios
+            buffer_dist = buffer_totals / buffer_totals.sum()
 
-        if self.per_splits > 1:
-            mems = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)
+            if self.per_splits > 1:
+                mems = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)
 
-            idxs, states, actions, rewards, next_states, dones, weights = self.memories[mems[0]].sample(
-                self.batch_size // self.per_splits)
-
-            for i in range(self.per_splits - 1):
-
-                idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[mems[i + 1]].sample(
+                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mems[0]].sample(
                     self.batch_size // self.per_splits)
 
-                idxs = np.concatenate((idxs, idxsN))
-                states = torch.cat((states, statesN))
-                actions = torch.cat((actions, actionsN))
-                rewards = torch.cat((rewards, rewardsN))
-                next_states = torch.cat((next_states, next_statesN))
-                dones = torch.cat((dones, donesN))
-                weights = torch.cat((weights, weightsN))
+                for i in range(self.per_splits - 1):
 
+                    idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[mems[i + 1]].sample(
+                        self.batch_size // self.per_splits)
+
+                    idxs = np.concatenate((idxs, idxsN))
+                    states = torch.cat((states, statesN))
+                    actions = torch.cat((actions, actionsN))
+                    rewards = torch.cat((rewards, rewardsN))
+                    next_states = torch.cat((next_states, next_statesN))
+                    dones = torch.cat((dones, donesN))
+                    weights = torch.cat((weights, weightsN))
+
+            else:
+                # this is a slight simplification of PER, but runs MUCH faster with very little memory
+                mem = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)[0]
+                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mem].sample(
+                    self.batch_size)
+
+
+            dones = dones.squeeze()
         else:
-            # this is a slight simplification of PER, but runs MUCH faster with very little memory
-            mem = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)[0]
-            idxs, states, actions, rewards, next_states, dones, weights = self.memories[mem].sample(
-                self.batch_size)
+            # this gets how many we should sample from each experience replay
+            to_sample_from_each = generate_random_sum_array(len(self.memories), self.batch_size)
 
-        #states = states.clone().detach().to(self.net.device)
-        #rewards = rewards.clone().detach().to(self.net.device)
-        dones = dones.squeeze()
-        #actions = actions.clone().detach().to(self.net.device)
-        #states_ = next_states.clone().detach().to(self.net.device)
+            states = []
+            actions = []
+            rewards = []
+            next_states = []
+            dones = []
+
+            for i in range(len(self.memories)):
+                if to_sample_from_each[i] > 0:
+                    statesN, actionsN, rewardsN, next_statesN, donesN = self.memories[i].sample(to_sample_from_each[i])
+                    states.append(statesN)
+                    actions.append(actionsN)
+                    rewards.append(rewardsN)
+                    next_states.append(next_statesN)
+                    dones.append(donesN)
+
+            states = torch.cat(states, dim=0)
+            actions = torch.cat(actions, dim=0)
+            rewards = torch.cat(rewards, dim=0)
+            next_states = torch.cat(next_states, dim=0)
+            dones = torch.cat(dones, dim=0)
+
+            dones = dones.squeeze()
+
 
         # use this code to check your states are correct
         """
@@ -424,8 +456,9 @@ class Agent:
                 proj_distr_v = proj_distr.to(self.net.device)
 
             loss_v = -state_log_sm_v * proj_distr_v
-            weights = T.squeeze(weights)
-            loss_v = weights.to(self.net.device) * loss_v.sum(dim=1)
+            if self.per:
+                weights = T.squeeze(weights)
+                loss_v = weights.to(self.net.device) * loss_v.sum(dim=1)
 
             loss = loss_v.mean()
 
@@ -453,7 +486,10 @@ class Agent:
             td_error = q_target - q_pred
             loss_v = torch.abs(td_error)
 
-            loss_squared = (td_error.pow(2) * weights.to(self.net.device))
+            if self.per:
+                loss_squared = (td_error.pow(2) * weights.to(self.net.device))
+            else:
+                loss_squared = td_error.pow(2)
 
             loss = loss_squared.mean().to(self.net.device)
 
@@ -487,7 +523,11 @@ class Agent:
             td_error = Q_targets - Q_expected
             loss_v = torch.abs(td_error)
 
-            loss_squared = (td_error.pow(2) * weights.to(self.net.device))
+            if self.per:
+                loss_squared = (td_error.pow(2) * weights.to(self.net.device))
+            else:
+                loss_squared = td_error.pow(2)
+
             loss = loss_squared.mean().to(self.net.device)
 
         elif self.iqn and not self.munchausen:
@@ -508,7 +548,8 @@ class Agent:
             actions = actions.unsqueeze(1)
             rewards = rewards.unsqueeze(1)
             dones = dones.unsqueeze(1)
-            weights = weights.unsqueeze(1)
+            if self.per:
+                weights = weights.unsqueeze(1)
 
             # Compute Q targets for current states
             Q_targets = rewards.unsqueeze(-1) + (
@@ -522,7 +563,7 @@ class Agent:
             td_error = Q_targets - Q_expected
             loss_v = torch.abs(td_error).sum(dim=1).mean(dim=1).data
             #assert td_error.shape == (self.batch_size, self.num_tau, self.num_tau), "wrong td error shape"
-            huber_l = calculate_huber_loss(td_error, 1.0)
+            huber_l = calculate_huber_loss(td_error, 1.0, self.num_tau)
             quantil_l = abs(taus - (td_error.detach() < 0).float()) * huber_l / 1.0
 
             loss = quantil_l.sum(dim=1).mean(dim=1, keepdim=True)  # , keepdim=True if per weights get multipl
@@ -543,7 +584,9 @@ class Agent:
             actions = actions.unsqueeze(1)
             rewards = rewards.unsqueeze(1)
             dones = dones.unsqueeze(1)
-            weights = weights.unsqueeze(1)
+            if self.per:
+                weights = weights.unsqueeze(1)
+
 
             # calculate log-pi
             logsum = torch.logsumexp(
@@ -580,11 +623,13 @@ class Agent:
             td_error = Q_targets - Q_expected
             loss_v = torch.abs(td_error).sum(dim=1).mean(dim=1).data
             #assert td_error.shape == (self.batch_size, self.num_tau, self.num_tau), "wrong td error shape"
-            huber_l = calculate_huber_loss(td_error, 1.0)
+            huber_l = calculate_huber_loss(td_error, 1.0, self.num_tau)
             quantil_l = abs(taus - (td_error.detach() < 0).float()) * huber_l / 1.0
 
             loss = quantil_l.sum(dim=1).mean(dim=1, keepdim=True)  # , keepdim=True if per weights get multipl
-            loss = loss * weights.to(self.net.device)
+
+            if self.per:
+                loss = loss * weights.to(self.net.device)
 
             if self.trust_regions:
                 loss = self.calculate_trust_regions(loss, loss_v, states, actions, Q_expected, Q_targets)
@@ -605,13 +650,14 @@ class Agent:
         if self.grad_steps % 10000 == 0:
             print("Completed " + str(self.grad_steps) + " gradient steps")
 
-        if self.num_envs > 1 and self.per_splits > 1:
-            idxs = np.split(idxs, self.per_splits)
-            loss_v = torch.split(loss_v, self.batch_size // self.per_splits)
-            for i in range(self.per_splits):
-                self.memories[mems[i]].update_priorities(idxs[i], loss_v[i].cpu().detach().numpy())
-        else:
-            self.memories[mem].update_priorities(idxs, loss_v.cpu().detach().numpy())
+        if self.per:
+            if self.num_envs > 1 and self.per_splits > 1:
+                idxs = np.split(idxs, self.per_splits)
+                loss_v = torch.split(loss_v, self.batch_size // self.per_splits)
+                for i in range(self.per_splits):
+                    self.memories[mems[i]].update_priorities(idxs[i], loss_v[i].cpu().detach().numpy())
+            else:
+                self.memories[mem].update_priorities(idxs, loss_v.cpu().detach().numpy())
 
     def calculate_trust_regions(self, loss, loss_v, states, actions, Q_expected, Q_targets):
         with torch.no_grad():
@@ -668,12 +714,12 @@ class Agent:
                 return loss
 
 
-def calculate_huber_loss(td_errors, k=1.0):
+def calculate_huber_loss(td_errors, k=1.0,taus=8):
     """
     Calculate huber loss element-wisely depending on kappa k.
     """
     loss = torch.where(td_errors.abs() <= k, 0.5 * td_errors.pow(2), k * (td_errors.abs() - 0.5 * k))
-    assert loss.shape == (td_errors.shape[0], 8, 8), "huber loss has wrong shape"
+    assert loss.shape == (td_errors.shape[0], taus, taus), "huber loss has wrong shape"
     return loss
 
 def distr_projection(next_distr, rewards, dones, Vmin, Vmax, n_atoms, gamma):
@@ -712,3 +758,18 @@ def distr_projection(next_distr, rewards, dones, Vmin, Vmax, n_atoms, gamma):
             proj_distr[ne_dones, l[ne_mask]] = (u - b_j)[ne_mask]
             proj_distr[ne_dones, u[ne_mask]] = (b_j - l)[ne_mask]
     return proj_distr
+
+
+def generate_random_sum_array(length, total):
+    # Create an array of zeros
+    arr = np.zeros(length, dtype=int)
+
+    # Randomly distribute 'total' across the array
+    indices = np.random.choice(np.arange(length), size=total, replace=True)
+    for idx in indices:
+        arr[idx] += 1  # Increment element at randomly chosen index
+
+    # Shuffle the array to randomize the distribution
+    np.random.shuffle(arr)
+
+    return arr

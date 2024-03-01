@@ -1,1 +1,1 @@
-python main.py --ede 1
+python main.py --taus 64 --adamw 1 --lr_decay 1 --sqrt 1

@@ -1,187 +1,112 @@
-import torch
+# -*- coding: utf-8 -*-
+from __future__ import division
 import numpy as np
-import itertools
-"""
-Implementation of regular Experience Replay
+import torch
+from matplotlib import pyplot as plt
 
-Supports:
-VectorInput
-Memory Efficient (stores each frame once)
-N-Step
-Capable of changing N and gamma
-Fast!
-Can also set transitions to NOT be sampled (This helps with applications where things can crash)
-"""
-
-class ExperienceReplay:
-    def __init__(self, size, num_envs, n, gamma, input_shape):
-        self.size = size
-        self.num_envs = num_envs  # please make sure this is a power two if possible (although technically just
-        # needs to be divisible by num_envs)
-
-        self.n = n
-        self.gamma = gamma
-
-        self.input_shape = input_shape
-
-        self.framestack = self.input_shape[0]
-
-        self.idxs = np.array([0 for i in range(self.num_envs)])
-        # these are the idxs in the buffer we are at relative to the start of each chunk (NOT absolute)
-        self.max_idx = size // num_envs
-
-        self.max_per_env = np.array([-1 for i in range(self.num_envs)])  # this basically just tells us the highest we have reached
-        # this is used to know where we can sample from
-        self.total = 0
-
-        self.invalids = np.array([[] for i in range(self.num_envs)], dtype=int)
-
-        self.full = False
-
-        # the [1:] removes the framestack dim
-        self.state_mem = torch.empty((self.size, *input_shape[1:]), dtype=torch.uint8)
-        self.action_mem = torch.empty(self.size, dtype=torch.int64)
-        self.reward_mem = torch.empty(self.size, dtype=torch.float32)
-        self.terminal_mem = torch.empty(self.size, dtype=torch.bool)
-        self.not_samplable = []
-
-    def append(self, state, action, reward, terminal, stream, samplable=True):
-
-        idx = self.idxs[stream] + stream * self.max_idx
-
-        self.state_mem[idx] = state
-        self.action_mem[idx] = action
-        self.reward_mem[idx] = reward
-        self.terminal_mem[idx] = terminal
-
-        if not samplable:
-            for i in range(self.n + self.framestack):
-                self.not_samplable.append((idx - i) % self.max_idx)
-
-        self.idxs[stream] = (self.idxs[stream] + 1) % self.max_idx
-        self.total += 1
-        self.max_per_env[stream] = min(self.max_per_env[stream] + 1, self.max_idx)
-
-        self.invalids = self.create_invalid_sequences(self.idxs)
-
-        if not self.full:
-            full = True
-            for i in self.max_per_env:
-                if i != self.max_idx:
-                    full = False
-                    break
-
-            if full:
-                self.full = True
-
-    def batch_append(self, states, actions, rewards, terminals):
-        states = states[self.input_shape[0] - 1, :, :]
-
-        # gets the idxs where the new transitions will be placed
-        new_idxs = np.arange(self.num_envs) * self.max_idx + self.idxs
-
-        self.state_mem[new_idxs] = states.to(dtype=torch.uint8, device=torch.device('cpu'))
-        self.action_mem[new_idxs] = actions.to(dtype=torch.int64)
-        self.reward_mem[new_idxs] = rewards.to(dtype=torch.float32)
-        self.terminal_mem[new_idxs] = terminals.to(dtype=torch.bool)
-        # could potentially be added later though
-
-        # update which idxs are valid to be sampled from (N-step)
-        self.invalids = self.create_invalid_sequences(self.idxs)
-
-        # update idxs and stats for next time
-        self.idxs += 1
-        self.idxs = self.idxs % self.max_idx
-        self.total += self.num_envs
-        self.max_per_env = np.minimum(self.max_per_env + 1, self.max_idx)
-
-        # since batches have same amount for each env, can just check one
-        if not self.full:
-            if self.max_per_env[0] == self.max_idx:
-                self.full = True
-
-    def create_invalid_sequences(self, arr):
-        # Create an array of offsets
-        offsets = np.arange(self.framestack + self.n, -1, -1)
-
-        # Subtract offsets from each element in arr (broadcasting)
-        sequences = (arr.reshape(-1, 1) - offsets) % self.max_idx
-
-        if len(self.not_samplable) > 0:
-            # add anything which should not be sampled
-            sequences = np.append(sequences, np.array(self.not_samplable))
-
-        return sequences
-
-    def generate_idxs(self, bs):
-        if self.full:
-            return np.random.randint(0, self.size + 1, bs)
-        else:
-            # this technically isn't uniform random if envs have different nums of transitions
-            # this basically randomly chooses which env to look at, then samples a random transition from that env
-
-            indices = np.random.randint(low=0, high=self.num_envs, size=bs)
-
-            selected_limits = np.array([self.max_per_env[i] for i in indices])
-
-            return np.array([np.random.randint(0, limit) for limit in selected_limits])
+Transition_dtype = np.dtype([('timestep', np.int32), ('state', np.uint8, (84, 84)), ('action', np.int32), ('reward', np.float32), ('nonterminal', np.bool_)])
+blank_trans = (0, np.zeros((84, 84), dtype=np.uint8), 0, 0.0, False)
 
 
-    def sample(self, bs):
-        # This will break if self.total < bs!
-        # please do your checks somewhere else!
+# Segment tree data structure where parent node values are sum/max of children node values
+class Buffer:
+  def __init__(self, size):
+    self.index = 0
+    self.size = size
+    self.full = False  # Used to track actual capacity
+    self.data = np.array([blank_trans] * size, dtype=Transition_dtype)  # Build structured array
+    self.max_idx = -1
 
-        # Need to decide the idxs we are sampling from
+  def append(self, data):
+    self.data[self.index] = data  # Store data in underlying data structure
 
-        idxs = self.generate_idxs(bs)
-        # this gets indices from anywhere, but we still need to check they aren't invalid due to N-step
+    self.index = (self.index + 1) % self.size  # Update index
+    self.full = self.full or self.index == 0  # Save when capacity reached
+    self.max_idx = min(self.max_idx + 1, self.size)
 
-        first_mask = np.ones(bs, dtype=bool)
+  # Returns data given a data index
+  def get(self, data_index):
+    return self.data[data_index % self.size]
 
-        while True:
-            # Check if each element in data is in the invalid list
-            new_mask = ~np.isin(idxs, self.invalids)
+class RegularReplayMemory():
+  def __init__(self, capacity, n, discount, device):
+    self.device = device
+    self.capacity = capacity
+    self.history = 4
+    self.discount = discount
+    self.n = n
+    self.t = 0  # Internal episode timestep counter
+    self.n_step_scaling = torch.tensor([self.discount ** i for i in range(self.n)], dtype=torch.float32, device=self.device)  # Discount-scaling vector for n-step returns
+    self.transitions = Buffer(capacity)  # Store transitions in a wrap-around cyclic buffer within a sum tree for querying priorities
+    self.avoids = np.zeros(capacity, dtype=bool)
 
-            # Check if there were any changes compared to the last iteration
-            if np.array_equal(new_mask, first_mask):
-                break  # Exit the loop if no changes
+  # Adds state and action at time t, reward and terminal at time t + 1
+  def append(self, state, action, reward, terminal, invalid=None):
+    state = state[-1].to(dtype=torch.uint8, device=torch.device('cpu'))  # Only store last frame and discretise to save memory
+    self.avoids[self.transitions.index] = False if invalid is None else True
+    self.transitions.append((self.t, state, action, reward, not terminal))  # Store new transition with maximum priority
+    self.t = 0 if terminal else self.t + 1  # Start new episodes with t = 0
 
-            # Update the data and mask for the next iteration
-            mask = ~new_mask
-            idxs[mask] = self.generate_idxs(np.sum(mask))
+  # Returns the transitions with blank states where appropriate
+  def _get_transitions(self, idxs):
+    transition_idxs = np.arange(-self.history + 1, self.n + 1) + np.expand_dims(idxs, axis=1)
+    transitions = self.transitions.get(transition_idxs)
+    transitions_firsts = transitions['timestep'] == 0
+    blank_mask = np.zeros_like(transitions_firsts, dtype=np.bool_)
+    for t in range(self.history - 2, -1, -1):  # e.g. 2 1 0
+      blank_mask[:, t] = np.logical_or(blank_mask[:, t + 1], transitions_firsts[:, t + 1]) # True if future frame has timestep 0
+    for t in range(self.history, self.history + self.n):  # e.g. 4 5 6
+      blank_mask[:, t] = np.logical_or(blank_mask[:, t - 1], transitions_firsts[:, t]) # True if current or past frame has timestep 0
+    transitions[blank_mask] = blank_trans
+    return transitions
 
-        # do masks over memories
+  # Returns a valid sample from each segment
+  def _get_samples_from_segments(self, batch_size):
+    valid = False
+    while not valid:
+      idxs = np.random.randint(0, self.transitions.max_idx, batch_size)
+      if np.all((self.transitions.index - idxs) % self.capacity > self.n) and np.all((idxs - self.transitions.index) % self.capacity >= self.history) and not np.any(self.avoids[idxs]):
+        valid = True  # Note that conditions are valid but extra conservative around buffer index 0
+    # Retrieve all required transition data (from t - h to t + n)
+    transitions = self._get_transitions(idxs)
+    # Create un-discretised states and nth next states
+    all_states = transitions['state']
+    states = torch.tensor(all_states[:, :self.history], dtype=torch.uint8)
+    next_states = torch.tensor(all_states[:, self.n:self.n + self.history], dtype=torch.uint8)
+    # Discrete actions to be used as index
+    actions = torch.tensor(np.copy(transitions['action'][:, self.history - 1]), dtype=torch.int64, device=self.device)
+    # Calculate truncated n-step discounted returns R^n = Σ_k=0->n-1 (γ^k)R_t+k+1 (note that invalid nth next states have reward 0)
+    rewards = torch.tensor(np.copy(transitions['reward'][:, self.history - 1:-1]), dtype=torch.float32, device=self.device)
+    R = torch.matmul(rewards, self.n_step_scaling)
+    # Mask for non-terminal nth next states
+    nonterminals = torch.tensor(np.expand_dims(transitions['nonterminal'][:, self.history + self.n - 1], axis=1), dtype=torch.float32, device=self.device)
+    return states, actions, R, next_states, nonterminals
 
-        actions = self.action_mem[idxs]
-        states, rewards, next_states, terminals = self.lookahead(idxs, bs)
-        states = states.to(torch.float32).cuda()
-        next_states = next_states.to(torch.float32).cuda()
+  def sample(self, batch_size):
+    states, actions, returns, next_states, nonterminals = self._get_samples_from_segments(batch_size)  # Get batch of valid samples
+    nonterminals = nonterminals.bool()
+    nonterminals = ~nonterminals
+    states = states.to(torch.float32).cuda()
+    next_states = next_states.to(torch.float32).cuda()
+    return states, actions, returns, next_states, nonterminals
 
-        nonterminals = ~terminals
+  # Set up internal state for iterator
+  def __iter__(self):
+    self.current_idx = 0
+    return self
 
-        return states, actions, rewards, next_states, nonterminals
+  # Return valid states for validation
+  """def __next__(self):
+    if self.current_idx == self.capacity:
+      raise StopIteration
+    transitions = self.transitions.data[np.arange(self.current_idx - self.history + 1, self.current_idx + 1)]
+    transitions_firsts = transitions['timestep'] == 0
+    blank_mask = np.zeros_like(transitions_firsts, dtype=np.bool_)
+    for t in reversed(range(self.history - 1)):
+      blank_mask[t] = np.logical_or(blank_mask[t + 1], transitions_firsts[t + 1]) # If future frame has timestep 0
+    transitions[blank_mask] = blank_trans
+    state = torch.tensor(transitions['state'], dtype=torch.float32, device=self.device)  # Agent will turn into batch
+    self.current_idx += 1
+    return state
 
-    def lookahead(self, idxs, bs):
-        # this doesn't handle edge of range!
-        states = self.state_mem[idxs - self.framestack:idxs]
-        next_states = self.state_mem[idxs + self.n - self.framestack:idxs + self.n]
-
-        terminals = self.terminal_mem[idxs + self.n - self.framestack:idxs - self.framestack + self.n]
-        terminals = terminals.any(dim=1)
-
-        # this one has to look forward and apply gamma
-        rewards = self.reward_mem[idxs]  # to start with
-
-        temp_terminals = self.terminal_mem[idxs]
-
-        return states, rewards, next_states, terminals
-
-
-
-
-if __name__ == "__main__":
-    er = ExperienceReplay(20, 2, 3, 0.99, [1, 1])
-    er.batch_append(torch.tensor([[[5], [6]], [[2], [3]]]), torch.tensor([1, 2]),
-                    torch.tensor([0.2, 0.3]), torch.tensor([False, False]))
-
-
+  next = __next__  # Alias __next__ for Python 2 compatibility"""

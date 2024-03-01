@@ -50,6 +50,9 @@ if __name__ == '__main__':
     parser.add_argument('--discount_anneal', type=int, default=0)
     parser.add_argument('--lr_decay', type=int, default=0)
 
+    parser.add_argument('--per', type=int, default=1)
+    parser.add_argument('--taus', type=int, default=8)
+
     args = parser.parse_args()
 
     game = args.game
@@ -79,13 +82,17 @@ if __name__ == '__main__':
     ede = args.ede
     lr_decay = args.lr_decay
 
+    per = args.per
+    taus = args.taus
+
     discount_anneal = args.discount_anneal
 
     # tau_str = "{:e}".format(ema_tau)
     # str(tau_str).replace(".", "").replace("0", "")
 
-    agent_name = "BTR_adamw" + str(adamw) + "_sqrt" + str(sqrt) + "_ede" + str(ede) + "_discount" +\
-                 str(discount).replace(".", "") + "_discount_anneal" + str(discount_anneal) + "_lr_decay" + str(lr_decay)
+    agent_name = "BTR_adamw" + str(adamw) + "_sqrt" + str(sqrt) + "_discount" +\
+                 str(discount).replace(".", "") + "_lr_decay" + str(lr_decay) \
+                 + "_per" + str(per) + "_taus" + str(taus)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -151,7 +158,8 @@ if __name__ == '__main__':
                   agent_name=agent_name, total_frames=n_steps, testing=testing, batch_size=bs, rr=rr, lr=lr,
                   maxpool_size=maxpool_size, ema=ema, trust_regions=tr, target_replace=c, ema_tau=ema_tau,
                   noisy=noisy, spectral=spectral, munch=munch, iqn=iqn, double=double, dueling=dueling, impala=impala,
-                  discount=discount, adamw=adamw, ede=ede, sqrt=sqrt, discount_anneal=discount_anneal, lr_decay=lr_decay)
+                  discount=discount, adamw=adamw, ede=ede, sqrt=sqrt, discount_anneal=discount_anneal, lr_decay=lr_decay,
+                  per=per, taus=taus)
 
     if wandb_logs:
         wandb.init(

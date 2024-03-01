@@ -672,10 +672,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         def identity(p): return p
 
         if spectral:
-            #spectral_norm_kwargs = {"eps": 1e-8}
-            print("Using Spectral Norm")
             norm_func = torch.nn.utils.parametrizations.spectral_norm
-            #norm_func = partial(norm_func, **spectral_norm_kwargs)
         else:
             norm_func = identity
 
