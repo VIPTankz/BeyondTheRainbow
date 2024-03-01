@@ -1,1 +1,1 @@
-python main.py --discount_anneal 1
+python main.py --lr_decay 1 --adamw 1 --sqrt 1
