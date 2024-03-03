@@ -64,8 +64,8 @@ class Agent:
         self.learn_step_counter = 0
         self.pruning = pruning
         if self.pruning:
-            self.start_prune = 0.09
-            self.end_prune = 0.15
+            self.start_prune = 0.2
+            self.end_prune = 0.8
             self.target_sparsity = 0.95
             self.next_prune = 0
             self.prune_frequency = 1000
