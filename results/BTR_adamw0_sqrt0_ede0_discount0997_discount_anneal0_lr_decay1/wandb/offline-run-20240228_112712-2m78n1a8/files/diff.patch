@@ -1,0 +1,9 @@
+diff --git a/__pycache__/Agent.cpython-311.pyc b/__pycache__/Agent.cpython-311.pyc
+index 45f515a..af56b87 100644
+Binary files a/__pycache__/Agent.cpython-311.pyc and b/__pycache__/Agent.cpython-311.pyc differ
+diff --git a/__pycache__/memory.cpython-311.pyc b/__pycache__/memory.cpython-311.pyc
+index 54d573c..021128e 100644
+Binary files a/__pycache__/memory.cpython-311.pyc and b/__pycache__/memory.cpython-311.pyc differ
+diff --git a/__pycache__/networks.cpython-311.pyc b/__pycache__/networks.cpython-311.pyc
+index d911251..8dec5f2 100644
+Binary files a/__pycache__/networks.cpython-311.pyc and b/__pycache__/networks.cpython-311.pyc differ

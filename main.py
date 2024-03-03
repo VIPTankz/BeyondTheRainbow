@@ -53,6 +53,9 @@ if __name__ == '__main__':
     parser.add_argument('--per', type=int, default=1)
     parser.add_argument('--taus', type=int, default=8)
 
+    parser.add_argument('--moe', type=int, default=0)  # This Does not Work Yet!
+    parser.add_argument('--pruning', type=int, default=0)
+
     args = parser.parse_args()
 
     game = args.game
@@ -80,19 +83,21 @@ if __name__ == '__main__':
     adamw = args.adamw
     sqrt = args.sqrt
     ede = args.ede
+    moe = args.moe
     lr_decay = args.lr_decay
 
     per = args.per
     taus = args.taus
+    pruning = args.pruning
 
     discount_anneal = args.discount_anneal
 
     # tau_str = "{:e}".format(ema_tau)
     # str(tau_str).replace(".", "").replace("0", "")
 
-    agent_name = "BTR_adamw" + str(adamw) + "_sqrt" + str(sqrt) + "_discount" +\
+    agent_name = "BTR_adamw" + str(adamw) + "_discount" +\
                  str(discount).replace(".", "") + "_lr_decay" + str(lr_decay) \
-                 + "_per" + str(per) + "_taus" + str(taus)
+                 + "_per" + str(per) + "_taus" + str(taus) + "_pruning" + str(pruning)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -159,7 +164,7 @@ if __name__ == '__main__':
                   maxpool_size=maxpool_size, ema=ema, trust_regions=tr, target_replace=c, ema_tau=ema_tau,
                   noisy=noisy, spectral=spectral, munch=munch, iqn=iqn, double=double, dueling=dueling, impala=impala,
                   discount=discount, adamw=adamw, ede=ede, sqrt=sqrt, discount_anneal=discount_anneal, lr_decay=lr_decay,
-                  per=per, taus=taus)
+                  per=per, taus=taus, moe=moe, pruning=pruning)
 
     if wandb_logs:
         wandb.init(

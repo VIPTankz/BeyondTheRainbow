@@ -11,6 +11,8 @@ from torch.nn import init
 import torch.nn.functional as F
 import numpy as np
 import time
+import torch.nn.utils.prune as prune
+#from soft_moe import SoftMoELayerWrapper
 
 #import kornia
 from torchvision.utils import save_image
@@ -641,7 +643,8 @@ class ImpalaCNNLargeIQN(nn.Module):
     Implementation of the large variant of the IMPALA CNN introduced in Espeholt et al. (2018).
     """
     def __init__(self, in_depth, actions, model_size=2, spectral=True, device='cuda:0',
-                 noisy=False, maxpool=False, num_tau=8, maxpool_size=6, dueling=True, sqrt=False, ede=False):
+                 noisy=False, maxpool=False, num_tau=8, maxpool_size=6, dueling=True, sqrt=False, ede=False, moe=False,
+                 pruning=False):
         super().__init__()
 
         self.start = time.time()
@@ -653,8 +656,14 @@ class ImpalaCNNLargeIQN(nn.Module):
         self.dueling = dueling
         self.sqrt = sqrt
         self.ede = ede
+        self.moe = moe
+        self.pruning = pruning
+
         if self.ede:
             self.ede_num_layers = 5
+
+        if self.moe:
+            self.output_channels = 32 * model_size
 
         self.linear_size = 256
         self.num_tau = num_tau
@@ -713,6 +722,33 @@ class ImpalaCNNLargeIQN(nn.Module):
             for i in self.ede_layers:
                 i.to(device)
 
+        elif self.moe:
+
+            """self.linear_layers = nn.Sequential(
+                SoftMoELayerWrapper(
+                    dim=self.conv_out_size // self.output_channels,
+                    slots_per_expert=1,
+                    num_experts=4,
+                    layer=nn.Linear,
+                    # nn.Linear arguments
+                    in_features=self.conv_out_size // self.output_channels,
+                    out_features=self.linear_size,
+                ),
+                nn.ReLU(),
+                nn.Linear(self.linear_size, actions)
+            )"""
+            self.l1 = SoftMoELayerWrapper(
+                    dim=self.conv_out_size // self.output_channels,
+                    slots_per_expert=1,
+                    num_experts=4,
+                    layer=nn.Linear,
+                    # nn.Linear arguments
+                    in_features=self.conv_out_size // self.output_channels,
+                    out_features=self.linear_size,
+                )
+            self.l2 = nn.ReLU()
+            self.l3 = nn.Linear(self.linear_size, actions)
+
         elif self.dueling:
             self.dueling = Dueling(
                 nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
@@ -729,6 +765,15 @@ class ImpalaCNNLargeIQN(nn.Module):
                 linear_layer(self.linear_size, actions)
             )
 
+        if self.pruning:
+            self.parameters_to_prune = []
+            for name, module in self.named_modules():
+                if hasattr(module, 'weight') and isinstance(module.weight, torch.nn.Parameter):
+                    self.parameters_to_prune.append((module, 'weight'))
+                if hasattr(module, 'bias') and module.bias is not None:
+                    self.parameters_to_prune.append((module, 'bias'))
+
+            self.parameters_to_prune = tuple(self.parameters_to_prune)
 
         self.to(device)
 
@@ -738,6 +783,15 @@ class ImpalaCNNLargeIQN(nn.Module):
     def _get_conv_out(self, shape):
         o = self.conv(torch.zeros(1, *shape))
         return int(np.prod(o.size()))
+
+    def prune(self, sparsity):
+        # loop over all modules in model
+        prune.global_unstructured(
+            self.parameters_to_prune,
+            pruning_method=prune.L1Unstructured,
+            amount=float(sparsity),
+        )
+
 
     #@torch.autocast('cuda')
     def forward(self, inputt, advantages_only=False):
@@ -767,8 +821,9 @@ class ImpalaCNNLargeIQN(nn.Module):
         cos = cos.view(batch_size * self.num_tau, self.n_cos)
         cos_x = torch.relu(self.cos_embedding(cos)).view(batch_size, self.num_tau, self.conv_out_size)  # (batch, n_tau, layer)
 
-        # x has shape (batch, layer_size) for multiplication –> reshape to (batch, 1, layer)
-        x = (x.unsqueeze(1) * cos_x).view(batch_size * self.num_tau, self.conv_out_size)
+        if not self.moe:
+            # x has shape (batch, layer_size) for multiplication –> reshape to (batch, 1, layer)
+            x = (x.unsqueeze(1) * cos_x).view(batch_size * self.num_tau, self.conv_out_size)
 
         if self.ede:
             outs = []
@@ -778,6 +833,17 @@ class ImpalaCNNLargeIQN(nn.Module):
             self.quantiles = torch.stack(outs, dim=0)  # should have shape (heads, bs, taus, actions)
             out = self.quantiles.mean(dim=0)
             #self.quantiles.detach()
+        elif self.moe:
+            # reshape x to be (batch_size * num_taus, channels, W*H)
+            x = (x.unsqueeze(1) * cos_x).view(batch_size * self.num_tau, self.output_channels, self.conv_out_size // self.output_channels)
+            print(x.shape)
+            #out = self.linear_layers(x)
+
+            out = self.l1(x)
+            print(out.shape)
+            out = self.l2(out)
+            out = self.l3(out)
+            print(out.shape)
 
         elif self.dueling:
             out = self.dueling(x, advantages_only=advantages_only)

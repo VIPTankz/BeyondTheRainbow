@@ -37,7 +37,8 @@ class Agent:
     def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=256
                  , rr=1, maxpool_size=6, lr=5e-5, ema=False, trust_regions=False, target_replace=8000, ema_tau=0.001,
                  noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.99,
-                 adamw=False, ede=False, sqrt=False, discount_anneal=False, lr_decay=False, per=True, taus=8):
+                 adamw=False, ede=False, sqrt=False, discount_anneal=False, lr_decay=False, per=True, taus=8, moe=False,
+                 pruning=False):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -61,6 +62,13 @@ class Agent:
 
         self.action_space = [i for i in range(self.n_actions)]
         self.learn_step_counter = 0
+        self.pruning = pruning
+        if self.pruning:
+            self.start_prune = 0.09
+            self.end_prune = 0.15
+            self.target_sparsity = 0.95
+            self.next_prune = 0
+            self.prune_frequency = 1000
 
         self.lr_decay = lr_decay
         if self.lr_decay:
@@ -91,6 +99,8 @@ class Agent:
 
         self.model_size = 2  # Scaling of IMPALA network
         self.maxpool_size = maxpool_size
+
+        self.moe = moe  # mixture of experts (2024 deepmind) - This Does not Work Yet!
 
         # do not use both spectral and noisy, they will interfere with each other
         self.noisy = noisy
@@ -199,11 +209,11 @@ class Agent:
                 # This is the BTR Network
                 self.net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions, spectral=self.spectral_norm, device=self.device,
                                              noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size,
-                                             dueling=dueling, sqrt=self.sqrt, ede=self.ede)
+                                             dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe, pruning=pruning)
 
                 self.tgt_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions,spectral=self.spectral_norm, device=self.device,
                                              noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size,
-                                                 dueling=dueling, sqrt=self.sqrt, ede=self.ede)
+                                                 dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe, pruning=pruning)
         else:
             self.net = NatureIQN(self.input_dims[0], self.n_actions, device=self.device,
                                      noisy=self.noisy, num_tau=self.num_tau)
@@ -342,6 +352,20 @@ class Agent:
             self.gamma = min(self.gamma + self.gamma_inc, self.final_gamma)
             for i in self.memories:
                 i.discount = self.gamma
+
+        if self.pruning:
+            if self.env_steps > self.total_frames * self.start_prune:
+                if self.env_steps > self.next_prune:
+                    self.next_prune = self.env_steps + self.prune_frequency
+
+                    if self.total_frames * self.end_prune > self.env_steps > self.total_frames * self.start_prune:
+                        current_t = self.env_steps / self.total_frames
+
+                        prune_amount = (1-(1-(current_t - self.start_prune)/(self.end_prune-self.start_prune))**3)
+                        self.net.prune(prune_amount)
+
+                    if self.total_frames * self.end_prune > self.env_steps:
+                        self.net.prune(self.target_sparsity)
 
         self.optimizer.zero_grad()
 
