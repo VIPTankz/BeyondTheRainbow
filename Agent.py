@@ -294,7 +294,7 @@ class Agent:
 
             if self.eval_mode:
                 for i in range(len(observation)):
-                    if np.random.random() > 0.99:
+                    if np.random.random() > 0.999:
                         x[i] = np.random.choice(self.action_space)
 
             return x

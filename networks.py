@@ -659,6 +659,9 @@ class ImpalaCNNLargeIQN(nn.Module):
         self.moe = moe
         self.pruning = pruning
 
+        if self.pruning:
+            self.last_sparsity = 0
+
         if self.ede:
             self.ede_num_layers = 5
 
@@ -775,6 +778,14 @@ class ImpalaCNNLargeIQN(nn.Module):
 
             self.parameters_to_prune = tuple(self.parameters_to_prune)
 
+
+            neurons_layer = 0
+            neurons_prev_layer = 0
+            kernel_w = 0
+            kernel_h = 0
+            erk_scaling = 1 - (neurons_prev_layer + neurons_layer + kernel_w + kernel_h) / \
+                        (neurons_prev_layer * neurons_layer * kernel_w * kernel_h)
+
         self.to(device)
 
     def reset_noise(self):
@@ -789,18 +800,17 @@ class ImpalaCNNLargeIQN(nn.Module):
 
     def prune(self, sparsity):
         # loop over all modules in model
-        prune.global_unstructured(
-            self.parameters_to_prune,
-            pruning_method=prune.l1_unstructured,
-            amount=float(sparsity),
-        )
+
+        # Pytorch pruning is based on proportion of UNPRUNED parameters, so doing 0.9 twice would result in
+        # 99% of parameters being pruned
+        self.last_sparsity = sparsity - self.last_sparsity
 
         # i[0] = module
         # i[1] = 'weight' or 'bias'
         # i[2] = amount (integer, parameters in that layer)
         for i in self.parameters_to_prune:
 
-            prune.l1_unstructured(i[0], i[1], amount=i[2])
+            prune.l1_unstructured(i[0], i[1], self.last_sparsity * i[3])
 
 
     #@torch.autocast('cuda')

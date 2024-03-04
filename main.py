@@ -313,5 +313,6 @@ if __name__ == '__main__':
             next_eval += eval_every
             agent.set_train_mode()
 
+    agent.save_model()
     if wandb_logs:
         wandb.finish()

@@ -1,10 +1,11 @@
 #!/bin/bash
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=40
+#SBATCH --cpus-per-task=32
+#SBATCH --gres=gpu:2
 #SBATCH --mem=96000
 #SBATCH -p batch
-#SBATCH --job-name=BTR_Atari_4
+#SBATCH --job-name=BTR_Atari
 #SBATCH --time=60:00:00
 #SBATCH --mail-user=tjc2g19@soton.ac.uk
 #SBATCH --mail-type=ALL
