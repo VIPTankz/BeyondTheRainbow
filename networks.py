@@ -788,7 +788,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         # loop over all modules in model
         prune.global_unstructured(
             self.parameters_to_prune,
-            pruning_method=prune.L1Unstructured,
+            pruning_method=prune.l1_unstructured,
             amount=float(sparsity),
         )
 

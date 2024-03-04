@@ -26,35 +26,37 @@ if __name__ == '__main__':
     parser.add_argument('--maxpool_size', type=int, default=6)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--testing', type=bool, default=False)
-    parser.add_argument('--ema', type=int, default=1)
     parser.add_argument('--ema_tau', type=float, default=2.5e-4)
     parser.add_argument('--tr', type=int, default=0)
-    parser.add_argument('--c', type=int, default=8000)  # this is the target replace
+
 
     # the way parser.add_argument handles bools in dumb so we use int 0 or 1 instead
     parser.add_argument('--noisy', type=int, default=0)
     parser.add_argument('--spectral', type=int, default=1)
-    parser.add_argument('--munch', type=int, default=1)
     parser.add_argument('--iqn', type=int, default=1)
+
+    parser.add_argument('--impala', type=int, default=1)
+    parser.add_argument('--discount', type=float, default=0.997)
+    parser.add_argument('--adamw', type=int, default=0)
+    parser.add_argument('--lr_decay', type=int, default=0)
+    parser.add_argument('--per', type=int, default=1)
+    parser.add_argument('--taus', type=int, default=64)
+
+    # features still in testing
+    parser.add_argument('--pruning', type=int, default=0)
+    parser.add_argument('--dueling', type=int, default=1)
+    parser.add_argument('--munch', type=int, default=1)
+    parser.add_argument('--ema', type=int, default=1)
+    parser.add_argument('--c', type=int, default=8000)  # this is the target replace
+
+    # depends on munchausen
     parser.add_argument('--double', type=int, default=0)
 
-    parser.add_argument('--dueling', type=int, default=1)
-    parser.add_argument('--impala', type=int, default=1)
-
-    parser.add_argument('--discount', type=float, default=0.997)
-
-    parser.add_argument('--adamw', type=int, default=0)
+    # likely dead improvements
     parser.add_argument('--sqrt', type=int, default=0)
     parser.add_argument('--ede', type=int, default=0)
-
     parser.add_argument('--discount_anneal', type=int, default=0)
-    parser.add_argument('--lr_decay', type=int, default=0)
-
-    parser.add_argument('--per', type=int, default=1)
-    parser.add_argument('--taus', type=int, default=8)
-
     parser.add_argument('--moe', type=int, default=0)  # This Does not Work Yet!
-    parser.add_argument('--pruning', type=int, default=0)
 
     args = parser.parse_args()
 
@@ -95,9 +97,8 @@ if __name__ == '__main__':
     # tau_str = "{:e}".format(ema_tau)
     # str(tau_str).replace(".", "").replace("0", "")
 
-    agent_name = "BTR_adamw" + str(adamw) + "_discount" +\
-                 str(discount).replace(".", "") + "_lr_decay" + str(lr_decay) \
-                 + "_per" + str(per) + "_taus" + str(taus) + "_pruning" + str(pruning)
+    agent_name = "BTR_adamw" + str(adamw) + "_lr_decay" + str(lr_decay) \
+                 + "_taus" + str(taus) + "_pruning" + str(pruning) + "_ema" + str(ema) + "_C" + str(c)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
