@@ -29,7 +29,6 @@ if __name__ == '__main__':
     parser.add_argument('--ema_tau', type=float, default=2.5e-4)
     parser.add_argument('--tr', type=int, default=0)
 
-
     # the way parser.add_argument handles bools in dumb so we use int 0 or 1 instead
     parser.add_argument('--noisy', type=int, default=0)
     parser.add_argument('--spectral', type=int, default=1)

@@ -64,8 +64,8 @@ class Agent:
         self.learn_step_counter = 0
         self.pruning = pruning
         if self.pruning:
-            self.start_prune = 0.2
-            self.end_prune = 0.8
+            self.start_prune = 0.02
+            self.end_prune = 0.12
             self.target_sparsity = 0.95
             self.next_prune = 0
             self.prune_frequency = 1000
@@ -361,7 +361,8 @@ class Agent:
                     if self.total_frames * self.end_prune > self.env_steps > self.total_frames * self.start_prune:
                         current_t = self.env_steps / self.total_frames
 
-                        prune_amount = (1-(1-(current_t - self.start_prune)/(self.end_prune-self.start_prune))**3)
+                        prune_amount = self.target_sparsity * \
+                                       (1-(1-(current_t - self.start_prune)/(self.end_prune-self.start_prune))**3)
                         self.net.prune(prune_amount)
 
                     if self.total_frames * self.end_prune > self.env_steps:

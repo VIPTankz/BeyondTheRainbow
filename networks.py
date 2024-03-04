@@ -784,6 +784,9 @@ class ImpalaCNNLargeIQN(nn.Module):
         o = self.conv(torch.zeros(1, *shape))
         return int(np.prod(o.size()))
 
+    def get_prune_params_per_layer(self):
+        pass
+
     def prune(self, sparsity):
         # loop over all modules in model
         prune.global_unstructured(
@@ -791,6 +794,13 @@ class ImpalaCNNLargeIQN(nn.Module):
             pruning_method=prune.l1_unstructured,
             amount=float(sparsity),
         )
+
+        # i[0] = module
+        # i[1] = 'weight' or 'bias'
+        # i[2] = amount (integer, parameters in that layer)
+        for i in self.parameters_to_prune:
+
+            prune.l1_unstructured(i[0], i[1], amount=i[2])
 
 
     #@torch.autocast('cuda')
