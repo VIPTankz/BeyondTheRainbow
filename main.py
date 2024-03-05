@@ -20,8 +20,8 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--game', type=str, default="BattleZone")  # This is BattleZone
     parser.add_argument('--envs', type=int, default=64)
-    parser.add_argument('--bs', type=int, default=256)  # This is not settled yet
-    parser.add_argument('--rr', type=int, default=1)  # This is not settled yet
+    parser.add_argument('--bs', type=int, default=256)
+    parser.add_argument('--rr', type=int, default=1)
 
     parser.add_argument('--maxpool_size', type=int, default=6)
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -98,9 +98,8 @@ if __name__ == '__main__':
     # tau_str = "{:e}".format(ema_tau)
     # str(tau_str).replace(".", "").replace("0", "")
 
-    agent_name = "BTR_taus" + str(taus) + "_pruning" + str(pruning) + "_ema" + str(ema) + "_C" + str(c) + \
+    agent_name = "BTR" + str(game) + "_taus" + str(taus) + "_pruning" + str(pruning) + "_ema" + str(ema) + "_C" + str(c) + \
             "_model_size" + str(model_size)
-
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -145,7 +144,7 @@ if __name__ == '__main__':
     else:
         num_envs = envs
         eval_envs = 8
-        n_steps = 50000000
+        n_steps = 40000000
         num_eval_episodes = 100
         eval_every = 1000000
 
@@ -210,6 +209,10 @@ if __name__ == '__main__':
     evals_total = []
 
     scores_count = [0 for i in range(num_envs)]
+
+    dormants = []
+    param_norms = []
+
     scores = []
     done = False
     observation, info = env.reset()
@@ -267,6 +270,19 @@ if __name__ == '__main__':
         if steps >= next_eval or steps >= n_steps:
 
             print("Evaluating")
+
+            dormants.append(agent.get_dormant_neurons())
+
+            # get and save percent of dormant neurons
+            fname = agent_name + game + "Dormants.npy"
+            if not testing:
+                np.save(fname, np.array(dormants))
+
+            # get Parameter Norm
+            param_norms.append(agent.calculate_parameter_norms())
+            fname = agent_name + game + "ParamNorms.npy"
+            if not testing:
+                np.save(fname, np.array(dormants))
 
             fname = agent_name + game + "Experiment.npy"
             if not testing:

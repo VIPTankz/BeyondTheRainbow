@@ -1,0 +1,1 @@
+python main.py --ema 0 --model_size 4

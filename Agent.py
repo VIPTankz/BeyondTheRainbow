@@ -190,6 +190,9 @@ class Agent:
 
         self.per = per
 
+        self.outputs = {}
+        self.dormant_tau = 0.025
+
         self.memories = []
         if self.per:
             for i in range(num_envs):
@@ -214,6 +217,18 @@ class Agent:
                 self.tgt_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions,spectral=self.spectral_norm, device=self.device,
                                              noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size,
                                                  dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe, pruning=pruning)
+
+                self.test_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions, spectral=self.spectral_norm,
+                                                 device=self.device,
+                                                 noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size,
+                                                 num_tau=self.num_tau, maxpool_size=self.maxpool_size,
+                                                 dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe,
+                                                 pruning=pruning)
+
+                for name, layer in self.test_net.named_modules():
+                    if isinstance(layer, torch.nn.Conv2d) or isinstance(layer, torch.nn.Linear):
+                        layer.register_forward_hook(self.get_activation(name))
+
         else:
             self.net = NatureIQN(self.input_dims[0], self.n_actions, device=self.device,
                                      noisy=self.noisy, num_tau=self.num_tau)
@@ -244,6 +259,63 @@ class Agent:
 
         if self.loading_checkpoint:
             self.load_models()
+
+    def get_activation(self, name):
+        def hook(model, input, output):
+            self.outputs[name] = output.detach()
+
+        return hook
+
+    def get_dormant_neurons(self):
+        self.test_net.load_state_dict(self.net.state_dict())
+        self.outputs = {}
+
+        states, rewards, actions, next_states, dones, weights, idxs, mems, mem = self.sample()
+        dormant_percents = 0
+        count = 0
+        _, _ = self.test_net(states)
+        for key, value in self.outputs.items():
+            count += 1
+
+            values = torch.reshape(value, (self.batch_size, -1))
+            values = torch.mean(values, dim=0)
+
+            values = torch.abs(values / (torch.sum(values) * (1 / len(values))))
+
+            dormants = values <= self.dormant_tau
+
+            dormant_total = torch.sum(dormants)
+
+            dormant_percent = dormant_total / len(values)
+            dormant_percents += dormant_percent
+
+        dormant_percents /= count
+
+        return dormant_percents.item()
+
+    def calculate_parameter_norms(self, norm_type=2):
+        self.test_net.load_state_dict(self.net.state_dict())
+        # Dictionary to store the norms
+        norms = {}
+        # Iterate through all named parameters
+        for name, param in self.test_net.named_parameters():
+            # Calculate the norm of the parameter
+            norm = torch.norm(param, p=norm_type).item()  # .item() converts a one-element tensor to a scalar
+            # Store the norm in the dictionary
+            norms[name] = norm
+
+        norms_tot = 0
+        count = 0
+        for key, value in norms.items():
+            count += 1
+            norms_tot += value
+            print(key)
+            print(value)
+
+        norms_tot /= count
+        print(norms_tot)
+
+        return norms_tot
 
 
     def get_grad_steps(self):
@@ -339,6 +411,78 @@ class Agent:
             for i in range(self.replay_ratio):
                 self.learn_call()
 
+    def sample(self):
+        if self.per:
+            # get total priority from each tree
+            buffer_totals = np.empty(self.num_envs, dtype=float)
+            for i in range(self.num_envs):
+                buffer_totals[i] = self.memories[i].transitions.total()
+
+            # create probability distribution based on prios
+            buffer_dist = buffer_totals / buffer_totals.sum()
+
+            if self.per_splits > 1:
+                mem = 0
+                mems = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)
+
+                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mems[0]].sample(
+                    self.batch_size // self.per_splits)
+
+                for i in range(self.per_splits - 1):
+
+                    idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[mems[i + 1]].sample(
+                        self.batch_size // self.per_splits)
+
+                    idxs = np.concatenate((idxs, idxsN))
+                    states = torch.cat((states, statesN))
+                    actions = torch.cat((actions, actionsN))
+                    rewards = torch.cat((rewards, rewardsN))
+                    next_states = torch.cat((next_states, next_statesN))
+                    dones = torch.cat((dones, donesN))
+                    weights = torch.cat((weights, weightsN))
+
+            else:
+                mems = 0
+                # this is a slight simplification of PER, but runs MUCH faster with very little memory
+                mem = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)[0]
+                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mem].sample(
+                    self.batch_size)
+
+            dones = dones.squeeze()
+
+        else:
+            weights = 0
+            idxs = 0
+            mem = 0
+            mems = 0
+            # this gets how many we should sample from each experience replay
+            to_sample_from_each = generate_random_sum_array(len(self.memories), self.batch_size)
+
+            states = []
+            actions = []
+            rewards = []
+            next_states = []
+            dones = []
+
+            for i in range(len(self.memories)):
+                if to_sample_from_each[i] > 0:
+                    statesN, actionsN, rewardsN, next_statesN, donesN = self.memories[i].sample(to_sample_from_each[i])
+                    states.append(statesN)
+                    actions.append(actionsN)
+                    rewards.append(rewardsN)
+                    next_states.append(next_statesN)
+                    dones.append(donesN)
+
+            states = torch.cat(states, dim=0)
+            actions = torch.cat(actions, dim=0)
+            rewards = torch.cat(rewards, dim=0)
+            next_states = torch.cat(next_states, dim=0)
+            dones = torch.cat(dones, dim=0)
+
+            dones = dones.squeeze()
+
+        return states, rewards, actions, next_states, dones, weights, idxs, mems, mem
+
     def learn_call(self):
 
         if self.env_steps < self.min_sampling_size:
@@ -380,68 +524,10 @@ class Agent:
         else:
             self.soft_update()
 
-        if self.per:
-            # get total priority from each tree
-            buffer_totals = np.empty(self.num_envs, dtype=float)
-            for i in range(self.num_envs):
-                buffer_totals[i] = self.memories[i].transitions.total()
+        if np.random.random() > 0.99:
+            self.get_dormant_neurons()
 
-            # create probability distribution based on prios
-            buffer_dist = buffer_totals / buffer_totals.sum()
-
-            if self.per_splits > 1:
-                mems = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)
-
-                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mems[0]].sample(
-                    self.batch_size // self.per_splits)
-
-                for i in range(self.per_splits - 1):
-
-                    idxsN, statesN, actionsN, rewardsN, next_statesN, donesN, weightsN = self.memories[mems[i + 1]].sample(
-                        self.batch_size // self.per_splits)
-
-                    idxs = np.concatenate((idxs, idxsN))
-                    states = torch.cat((states, statesN))
-                    actions = torch.cat((actions, actionsN))
-                    rewards = torch.cat((rewards, rewardsN))
-                    next_states = torch.cat((next_states, next_statesN))
-                    dones = torch.cat((dones, donesN))
-                    weights = torch.cat((weights, weightsN))
-
-            else:
-                # this is a slight simplification of PER, but runs MUCH faster with very little memory
-                mem = np.random.choice(self.num_envs, self.per_splits, replace=False, p=buffer_dist)[0]
-                idxs, states, actions, rewards, next_states, dones, weights = self.memories[mem].sample(
-                    self.batch_size)
-
-
-            dones = dones.squeeze()
-        else:
-            # this gets how many we should sample from each experience replay
-            to_sample_from_each = generate_random_sum_array(len(self.memories), self.batch_size)
-
-            states = []
-            actions = []
-            rewards = []
-            next_states = []
-            dones = []
-
-            for i in range(len(self.memories)):
-                if to_sample_from_each[i] > 0:
-                    statesN, actionsN, rewardsN, next_statesN, donesN = self.memories[i].sample(to_sample_from_each[i])
-                    states.append(statesN)
-                    actions.append(actionsN)
-                    rewards.append(rewardsN)
-                    next_states.append(next_statesN)
-                    dones.append(donesN)
-
-            states = torch.cat(states, dim=0)
-            actions = torch.cat(actions, dim=0)
-            rewards = torch.cat(rewards, dim=0)
-            next_states = torch.cat(next_states, dim=0)
-            dones = torch.cat(dones, dim=0)
-
-            dones = dones.squeeze()
+        states, rewards, actions, next_states, dones, weights, idxs, mems, mem = self.sample()
 
 
         # use this code to check your states are correct
