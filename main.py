@@ -39,7 +39,7 @@ if __name__ == '__main__':
     parser.add_argument('--adamw', type=int, default=0)
     parser.add_argument('--lr_decay', type=int, default=0)
     parser.add_argument('--per', type=int, default=1)
-    parser.add_argument('--taus', type=int, default=64)
+    parser.add_argument('--taus', type=int, default=8)
 
     # features still in testing
     parser.add_argument('--pruning', type=int, default=0)
@@ -47,6 +47,7 @@ if __name__ == '__main__':
     parser.add_argument('--munch', type=int, default=1)
     parser.add_argument('--ema', type=int, default=1)
     parser.add_argument('--c', type=int, default=8000)  # this is the target replace
+    parser.add_argument('--model_size', type=int, default=2)
 
     # depends on munchausen
     parser.add_argument('--double', type=int, default=0)
@@ -90,14 +91,16 @@ if __name__ == '__main__':
     per = args.per
     taus = args.taus
     pruning = args.pruning
+    model_size = args.model_size
 
     discount_anneal = args.discount_anneal
 
     # tau_str = "{:e}".format(ema_tau)
     # str(tau_str).replace(".", "").replace("0", "")
 
-    agent_name = "BTR_adamw" + str(adamw) + "_lr_decay" + str(lr_decay) \
-                 + "_taus" + str(taus) + "_pruning" + str(pruning) + "_ema" + str(ema) + "_C" + str(c)
+    agent_name = "BTR_taus" + str(taus) + "_pruning" + str(pruning) + "_ema" + str(ema) + "_C" + str(c) + \
+            "_model_size" + str(model_size)
+
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -164,7 +167,7 @@ if __name__ == '__main__':
                   maxpool_size=maxpool_size, ema=ema, trust_regions=tr, target_replace=c, ema_tau=ema_tau,
                   noisy=noisy, spectral=spectral, munch=munch, iqn=iqn, double=double, dueling=dueling, impala=impala,
                   discount=discount, adamw=adamw, ede=ede, sqrt=sqrt, discount_anneal=discount_anneal, lr_decay=lr_decay,
-                  per=per, taus=taus, moe=moe, pruning=pruning)
+                  per=per, taus=taus, moe=moe, pruning=pruning, model_size=model_size)
 
     if wandb_logs:
         wandb.init(

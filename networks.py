@@ -778,13 +778,18 @@ class ImpalaCNNLargeIQN(nn.Module):
 
             self.parameters_to_prune = tuple(self.parameters_to_prune)
 
-
+            """ unfinished erk scale stuff
             neurons_layer = 0
             neurons_prev_layer = 0
             kernel_w = 0
             kernel_h = 0
+
+            # non-conv layer
+            er_scaling =
+
             erk_scaling = 1 - (neurons_prev_layer + neurons_layer + kernel_w + kernel_h) / \
                         (neurons_prev_layer * neurons_layer * kernel_w * kernel_h)
+            """
 
         self.to(device)
 

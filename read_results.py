@@ -4,10 +4,11 @@ from read_rainbow import get_rainbow, get_dqn
 import matplotlib.patheffects as pe
 
 games = ["BattleZone"]
-files = ["BTR_adamw1_sqrt1_discount0997_lr_decay1_per1_taus64", "BTR_adamw1_sqrt1_ede0_discount0997_discount_anneal0_lr_decay1","BTR_adamw1_sqrt1_ede0_discount0997_discount_anneal0_lr_decay0",
-         "BTR_adamw0_sqrt0_ede0_discount0997_discount_anneal0_lr_decay1", "BTR_adamw1_sqrt0_ede0_discount0997", "BTR_adamw1_sqrt0_discount0997_lr_decay1_per0_taus8", "BTR_noisy0_spectral1_munch1_iqn1_dueling1_impala1_discount0997"]
+files = ["BTR_adamw1_sqrt0_discount0997_lr_decay1_per1_taus64", "BTR_adamw1_sqrt0_discount0997_lr_decay1_per1_taus8",
+         "BTR_adamw1_sqrt1_discount0997_lr_decay1_per1_taus64", "BTR_adamw0_sqrt0_ede0_discount0997_discount_anneal0_lr_decay1",
+         "BTR_adamw1_sqrt0_ede0_discount0997", "BTR_adamw1_sqrt1_ede0_discount0997_discount_anneal0_lr_decay1"]
 
-filenames = ["BTR + WD + SQRT + LRD + 64Taus", "BTR + WD + SQRT + LRD", "BTR + WD + SQRT", "BTR + lr decay (LRD)", "BTR + Weight Decay (WD)", "BTR + WD + LRD - PER", "BTR", "Rainbow", "DQN"]
+filenames = ["BTR", "BTR 8 Taus", "BTR + SQRT", "BTR 8 Taus, No WD", "BTR 8 Taus, No LRD", "BTR 8 Taus + SQRT","Rainbow", "DQN"]
 
 """files = ["BTR_discount099_avg", "BTR_adamw0_sqrt1_ede0_discount0997", "BTR_noisy0_spectral1_munch1_iqn0_double0", "BTR_noisy0_spectral1_munch0_iqn1_double0",
          "BTR_noisy1_spectral0_munch1_iqn1_dueling1_impala1_discount099", "BTR_noisy0_spectral1_munch1_iqn1_dueling0_impala1_discount099",

@@ -38,7 +38,7 @@ class Agent:
                  , rr=1, maxpool_size=6, lr=5e-5, ema=False, trust_regions=False, target_replace=8000, ema_tau=0.001,
                  noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.99,
                  adamw=False, ede=False, sqrt=False, discount_anneal=False, lr_decay=False, per=True, taus=8, moe=False,
-                 pruning=False):
+                 pruning=False, model_size=2):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -97,7 +97,7 @@ class Agent:
             self.discount_anneal = False
         self.batch_size = batch_size
 
-        self.model_size = 2  # Scaling of IMPALA network
+        self.model_size = model_size  # Scaling of IMPALA network
         self.maxpool_size = maxpool_size
 
         self.moe = moe  # mixture of experts (2024 deepmind) - This Does not Work Yet!
