@@ -9,7 +9,7 @@
 #SBATCH --time=60:00:00
 #SBATCH --mail-user=tjc2g19@soton.ac.uk
 #SBATCH --mail-type=ALL
-#SBATCH --account=tjc2g19
+#SBATCH --account=ecsstaff
 
 module load conda/py3-latest
 source activate BTR
