@@ -4,6 +4,7 @@
 #SBATCH --cpus-per-task=40
 #SBATCH --mem=96000
 #SBATCH -p batch
+#SBATCH --gres=gpu:2
 #SBATCH --job-name=BTR_Atari_2
 #SBATCH --time=60:00:00
 #SBATCH --mail-user=tjc2g19@soton.ac.uk

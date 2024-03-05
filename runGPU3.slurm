@@ -2,6 +2,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=40
+#SBATCH --gres=gpu:2
 #SBATCH --mem=96000
 #SBATCH -p batch
 #SBATCH --job-name=BTR_Atari
