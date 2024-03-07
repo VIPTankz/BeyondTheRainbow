@@ -1,1 +1,1 @@
-python main.py --model_size 4
+python main.py --frames 100000000

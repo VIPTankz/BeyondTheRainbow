@@ -1,1 +1,1 @@
-python main.py --lr_decay 1 --adamw 1 --ema 0 --c 4000
+python main.py --game NameThisGame

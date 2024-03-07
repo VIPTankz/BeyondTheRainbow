@@ -299,21 +299,19 @@ class Agent:
         norms = {}
         # Iterate through all named parameters
         for name, param in self.test_net.named_parameters():
-            # Calculate the norm of the parameter
-            norm = torch.norm(param, p=norm_type).item()  # .item() converts a one-element tensor to a scalar
-            # Store the norm in the dictionary
-            norms[name] = norm
+            if 'weight' in name:
+                # Calculate the norm of the parameter
+                norm = torch.norm(param, p=norm_type).item()  # .item() converts a one-element tensor to a scalar
+                # Store the norm in the dictionary
+                norms[name] = norm
 
         norms_tot = 0
         count = 0
         for key, value in norms.items():
             count += 1
             norms_tot += value
-            print(key)
-            print(value)
 
         norms_tot /= count
-        print(norms_tot)
 
         return norms_tot
 

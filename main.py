@@ -22,6 +22,7 @@ if __name__ == '__main__':
     parser.add_argument('--envs', type=int, default=64)
     parser.add_argument('--bs', type=int, default=256)
     parser.add_argument('--rr', type=int, default=1)
+    parser.add_argument('--frames', type=int, default=40000000)
 
     parser.add_argument('--maxpool_size', type=int, default=6)
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -93,13 +94,18 @@ if __name__ == '__main__':
     pruning = args.pruning
     model_size = args.model_size
 
+    frames = args.frames
+
     discount_anneal = args.discount_anneal
+
+    # atari-3 : Battle Zone, Name This Game, Phoenix
+    # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Qbert
 
     # tau_str = "{:e}".format(ema_tau)
     # str(tau_str).replace(".", "").replace("0", "")
+    frame_name = str(int(frames / 1000000)) + "M"
 
-    agent_name = "BTR" + str(game) + "_taus" + str(taus) + "_pruning" + str(pruning) + "_ema" + str(ema) + "_C" + str(c) + \
-            "_model_size" + str(model_size)
+    agent_name = "BTR_" + game + frame_name + "_ema" + str(ema) + "_C" + str(c)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -144,7 +150,7 @@ if __name__ == '__main__':
     else:
         num_envs = envs
         eval_envs = 8
-        n_steps = 40000000
+        n_steps = frames
         num_eval_episodes = 100
         eval_every = 1000000
 

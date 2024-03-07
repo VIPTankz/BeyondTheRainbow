@@ -668,7 +668,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         if self.moe:
             self.output_channels = 32 * model_size
 
-        self.linear_size = 256
+        self.linear_size = 512
         self.num_tau = num_tau
 
         self.maxpool_size = maxpool_size
