@@ -1,1 +1,1 @@
-python main.py --frames 100000000
+python main.py --pruning 1
