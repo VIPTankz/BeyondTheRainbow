@@ -1,29 +1,24 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from read_rainbow import get_rainbow, get_dqn
+from read_rainbow import get_entry
 import matplotlib.patheffects as pe
 
 games = ["BattleZone"]
 files = ["BTR_adamw1_sqrt0_discount0997_lr_decay1_per1_taus64", "BTR_adamw1_sqrt0_discount0997_lr_decay1_per1_taus8",
          "BTR_taus8_pruning0_ema1_C8000_model_size4", "BTR_taus8_pruning0_ema0_C4000_model_size2",
-         "BTR_adamw1_lr_decay1_taus64_pruning0_ema0_C16000"]
+         ]
 
-filenames = ["BTR 64 Taus", "BTR 8 Taus", "BTR 8 Taus Modelx4", "BTR 8 Taus C4k", "BTR 64 Taus C16k", "Rainbow", "DQN"]
+files = ["BTR_adamw1_sqrt0_discount0997_lr_decay1_per1_taus8", "BTR_taus8_pruning0_ema0_C4000_model_size2",
+         "BTR_taus8_pruning0_ema1_C8000_model_size4", "BTR_adamw1_lr_decay1_taus64_pruning0_ema0_C16000"]
 
-"""files = ["BTR_discount099_avg", "BTR_adamw0_sqrt1_ede0_discount0997", "BTR_noisy0_spectral1_munch1_iqn0_double0", "BTR_noisy0_spectral1_munch0_iqn1_double0",
-         "BTR_noisy1_spectral0_munch1_iqn1_dueling1_impala1_discount099", "BTR_noisy0_spectral1_munch1_iqn1_dueling0_impala1_discount099",
-         "BTR_noisy0_spectral1_munch1_iqn1_dueling1_impala1_discount0997", "BTR_adamw1_sqrt0_ede0_discount0997", "BTR_adamw0_sqrt0_ede0_discount0997_discount_anneal1"]
+filenames = ["BTR EMA", "BTR C4k", "C8k", "C16k"]
 
-filenames = ["BTR", "Discount+SQRT", "-IQN", "-Munchausen", "+Noisy -Spectral", "-Dueling", "Discount=0.997", "Discount+WeightDecay", "Discount0.97->0.997",
-             "Rainbow*", "DQN"]"""
+extra_algos = False
+if extra_algos:
+    filenames.append("Rainbow")
+    filenames.append("IQN")
+    filenames.append("DQN")
 
-"""
-files = ["BTR_adamw1_sqrt0_ede0_discount0997", "BTR_noisy0_spectral1_munch1_iqn0_double0", "BTR_discount099_avg",
-         "BTR_noisy1_spectral0_munch1_iqn1_dueling1_impala1_discount099", ]
-
-filenames = ["Beyond The Rainbow", "-IQN", "-Weight Decay", "-Spectral Normalization",
-             "Rainbow*", "DQN"]
-"""
 combined_data = []
 for file in files:
     # Load the combined data from the file
@@ -36,14 +31,15 @@ print(combined_data.shape)
 
 # Calculate the mean of each row (axis=2) to get the scores
 mean_scores = np.mean(combined_data, axis=2)
-print(mean_scores.shape)
 
+if extra_algos:
+    # add these for other algorthms
+    mean_scores = np.vstack((mean_scores, get_entry(games[0], "Rainbow")))
 
-mean_scores = np.vstack((mean_scores, get_rainbow(games[0])))
-print(mean_scores.shape)
+    mean_scores = np.vstack((mean_scores, get_entry(games[0], "IQN")))
 
-mean_scores = np.vstack((mean_scores, get_dqn(games[0])))
-print(mean_scores.shape)
+    mean_scores = np.vstack((mean_scores, get_entry(games[0], "DQN")))
+    print(mean_scores.shape)
 
 window_size = 5
 # Create a rolling window function
@@ -71,21 +67,19 @@ smoothed_scores = np.apply_along_axis(np.mean, axis=2, arr=rolling_window(mean_s
 smoothed_scores = add_first_scores(mean_scores, smoothed_scores)
 print(smoothed_scores.shape)
 
-
-
 # Create an array for the X axis values (1 to 50)
 #x_values = np.arange(1, total_frames)
 
 # Create the plot
 plt.figure(figsize=(10, 6))  # Set the figure size
-for i in range(len(files) + 2):
+for i in range(len(files) + 3 * extra_algos):
     # Plot the mean scores against the X values
     if i == 0:
-        plt.plot(smoothed_scores[i], linestyle='-', label=filenames[i], linewidth=3.,
-                 path_effects=[pe.Stroke(linewidth=5, foreground='b'), pe.Normal()], color="gold")
+        plt.plot(smoothed_scores[i], linestyle='-', label=filenames[i], linewidth=4.,
+                 path_effects=[pe.Stroke(linewidth=6, foreground='b'), pe.Normal()], color="gold")
 
     else:
-        plt.plot(smoothed_scores[i], linestyle='-', label=filenames[i], linewidth=1.)
+        plt.plot(smoothed_scores[i], linestyle='-', label=filenames[i], linewidth=2.)
 
 # Add labels and a title to the plot
 plt.xlabel("Frames (M)")

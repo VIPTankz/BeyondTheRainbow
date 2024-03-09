@@ -64,9 +64,13 @@ class Agent:
         self.learn_step_counter = 0
         self.pruning = pruning
         if self.pruning:
-            self.start_prune = 0.02
-            self.end_prune = 0.12
+            # these are percentages of training where we prune
+            self.start_prune = 0.2
+            self.end_prune = 0.8
+
             self.target_sparsity = 0.95
+
+            # tracking when to prune
             self.next_prune = 0
             self.prune_frequency = 1000
 
@@ -260,11 +264,22 @@ class Agent:
         if self.loading_checkpoint:
             self.load_models()
 
+        # pytorch gives error of un-pruned net tries to copy pruned or vice-versa
+        # this just makes it easier, and doesn't actually prune anything
+        if self.pruning:
+            self.prune_none(self.net)
+            self.prune_none(self.tgt_net)
+            self.prune_none(self.test_net)
+
     def get_activation(self, name):
         def hook(model, input, output):
             self.outputs[name] = output.detach()
 
         return hook
+
+    def prune_none(self, net):
+        # this exists so we can still load pruned networks!
+        net.prune(0.)
 
     def get_dormant_neurons(self):
         self.test_net.load_state_dict(self.net.state_dict())
@@ -364,7 +379,7 @@ class Agent:
 
             if self.eval_mode:
                 for i in range(len(observation)):
-                    if np.random.random() > 0.999:
+                    if np.random.random() > 0.99:
                         x[i] = np.random.choice(self.action_space)
 
             return x
@@ -503,12 +518,13 @@ class Agent:
                     if self.total_frames * self.end_prune > self.env_steps > self.total_frames * self.start_prune:
                         current_t = self.env_steps / self.total_frames
 
+                        # cubic function
                         prune_amount = self.target_sparsity * \
                                        (1-(1-(current_t - self.start_prune)/(self.end_prune-self.start_prune))**3)
                         self.net.prune(prune_amount)
 
-                    if self.total_frames * self.end_prune > self.env_steps:
-                        self.net.prune(self.target_sparsity)
+                    """elif self.total_frames * self.end_prune < self.env_steps:
+                        self.net.prune(self.target_sparsity)"""
 
         self.optimizer.zero_grad()
 
@@ -670,12 +686,20 @@ class Agent:
 
             # Quantile Huber loss
             td_error = Q_targets - Q_expected
+
+            # get absolute losses for all taus
             loss_v = torch.abs(td_error).sum(dim=1).mean(dim=1).data
-            #assert td_error.shape == (self.batch_size, self.num_tau, self.num_tau), "wrong td error shape"
-            huber_l = calculate_huber_loss(td_error, 1.0, self.num_tau)
+            # assert td_error.shape == (self.batch_size, self.num_tau, self.num_tau), "wrong td error shape"
+
+            # calculate huber loss between prediction and target
+            huber_l = calculate_huber_loss(td_error, 1.0, self.num_tau)  # note this gives all positive values
+
+            # Multiply by the taus - this is what actually makes the quantiles, and also applies the sign
             quantil_l = abs(taus - (td_error.detach() < 0).float()) * huber_l / 1.0
 
-            loss = quantil_l.sum(dim=1).mean(dim=1, keepdim=True)  # , keepdim=True if per weights get multipl
+            # sum the losses
+            loss = quantil_l.sum(dim=1).mean(dim=1, keepdim=True)  # keepdim=True if using PER
+
             loss = loss * weights.to(self.net.device)
             if self.trust_regions:
                 loss = self.calculate_trust_regions(loss, loss_v, states, actions, Q_expected, Q_targets)

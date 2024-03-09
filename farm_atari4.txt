@@ -1,1 +1,1 @@
-python main.py --game Phoenix
+python main.py --game BattleZone --ema 0 --c 1000

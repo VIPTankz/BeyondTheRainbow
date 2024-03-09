@@ -136,19 +136,31 @@ class NatureIQN(nn.Module):
         taus [shape of ((batch_size, num_tau, 1))]
 
         """
+
+        # input is a batch of images
         input = input.float() / 256
         batch_size = input.size()[0]
 
+        # put input through convolutional layers
         x = self.conv(input)
         x = x.view(batch_size, -1)
 
-        cos, taus = self.calc_cos(batch_size, self.num_tau)  # cos shape (batch, num_tau, layer_size)
+        # generate taus (random uniform [0-1])
+        taus = torch.rand(batch_size, self.num_tau).to(self.device).unsqueeze(-1)  # (batch_size, n_tau, 1)
+
+        # put taus through cosine function before inserting into network
+        # All this really does is change the range from [0 to 1] to [-1 to 1]
+        cos = torch.cos(taus * self.pis)
+
         cos = cos.view(batch_size * self.num_tau, self.n_cos)
+
+        # apply cos embedding weights, then put values through relu and reshape
         cos_x = torch.relu(self.cos_embedding(cos)).view(batch_size, self.num_tau, self.conv_out_size)  # (batch, n_tau, layer)
 
-        # x has shape (batch, layer_size) for multiplication –> reshape to (batch, 1, layer)
+        # multiply output of conv layers by output of cosine/tau function
         x = (x.unsqueeze(1) * cos_x).view(batch_size * self.num_tau, self.conv_out_size)
 
+        # pass through final hidden layers
         x = torch.relu(self.fc1(x))
         out = self.fc2(x)
 
@@ -158,16 +170,6 @@ class NatureIQN(nn.Module):
         quantiles, _ = self.forward(inputs)
         actions = quantiles.mean(dim=1)
         return actions
-
-    def calc_cos(self, batch_size, n_tau=8):
-        """
-        Calculating the cosinus values depending on the number of tau samples
-        """
-        taus = torch.rand(batch_size, n_tau).to(self.device).unsqueeze(-1) #(batch_size, n_tau, 1)
-        cos = torch.cos(taus*self.pis)
-
-        assert cos.shape == (batch_size,n_tau,self.n_cos), "cos shape is incorrect"
-        return cos, taus
 
     def save_checkpoint(self, name):
         #print('... saving checkpoint ...')
@@ -658,6 +660,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         self.ede = ede
         self.moe = moe
         self.pruning = pruning
+        self.in_depth = in_depth
 
         if self.pruning:
             self.last_sparsity = 0
@@ -769,27 +772,66 @@ class ImpalaCNNLargeIQN(nn.Module):
             )
 
         if self.pruning:
+            self.total_pruned = 0.0
             self.parameters_to_prune = []
+
+            neurons_prev_layer = in_depth
+
             for name, module in self.named_modules():
+
+                if (not hasattr(module, 'weight') and not hasattr(module, 'bias')) or 'parametrizations' in name \
+                        or 'cos_embedding' in name:
+                    continue
+
+                if 'dueling' in name:
+
+                    neurons_layer = module.out_features
+
+                    # er scalings
+                    if 'value' in name:
+                        if '0' in name:
+                            scaling = 1 - (neurons_prev_layer + neurons_layer) / (neurons_prev_layer * neurons_layer)
+                        else:
+                            scaling = 1 - (neurons_prev_layer_v + neurons_layer) / (neurons_prev_layer_v * neurons_layer)
+                    elif 'advantage' in name:
+                        if '0' in name:
+                            scaling = 1 - (neurons_prev_layer + neurons_layer) / (neurons_prev_layer * neurons_layer)
+                        else:
+                            scaling = 1 - (neurons_prev_layer_a + neurons_layer) / (neurons_prev_layer_a * neurons_layer)
+
+
+                    if 'value' in name:
+                        neurons_prev_layer_v = module.out_features
+                    if 'advantage' in name:
+                        neurons_prev_layer_a = module.out_features
+
+                elif 'conv' in name:
+
+                    neurons_layer = module.out_channels
+
+                    kernel_size = module.kernel_size  # This is a tuple (height, width)
+
+                    kernel_w = kernel_size[1]
+                    kernel_h = kernel_size[0]
+
+                    # erk scaling
+                    scaling = 1 - (neurons_prev_layer + neurons_layer + kernel_w + kernel_h) / \
+                                  (neurons_prev_layer * neurons_layer * kernel_w * kernel_h)
+
+                    neurons_prev_layer = neurons_layer
+                scaling = min(max(0., scaling), 1.)
+
+                # print(name)
+                # print("Scaling")
+                # print(scaling)
+
                 if hasattr(module, 'weight') and isinstance(module.weight, torch.nn.Parameter):
-                    self.parameters_to_prune.append((module, 'weight'))
+                    self.parameters_to_prune.append((module, 'weight', scaling))
+
                 if hasattr(module, 'bias') and module.bias is not None:
-                    self.parameters_to_prune.append((module, 'bias'))
+                    self.parameters_to_prune.append((module, 'bias', scaling))
 
             self.parameters_to_prune = tuple(self.parameters_to_prune)
-
-            """ unfinished erk scale stuff
-            neurons_layer = 0
-            neurons_prev_layer = 0
-            kernel_w = 0
-            kernel_h = 0
-
-            # non-conv layer
-            er_scaling =
-
-            erk_scaling = 1 - (neurons_prev_layer + neurons_layer + kernel_w + kernel_h) / \
-                        (neurons_prev_layer * neurons_layer * kernel_w * kernel_h)
-            """
 
         self.to(device)
 
@@ -808,14 +850,18 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         # Pytorch pruning is based on proportion of UNPRUNED parameters, so doing 0.9 twice would result in
         # 99% of parameters being pruned
-        self.last_sparsity = sparsity - self.last_sparsity
+
+        # print("hi")
+        # print(sparsity - self.total_pruned)
 
         # i[0] = module
         # i[1] = 'weight' or 'bias'
-        # i[2] = amount (integer, parameters in that layer)
+        # i[2] = amount (float of total parameters prune)
         for i in self.parameters_to_prune:
 
-            prune.l1_unstructured(i[0], i[1], self.last_sparsity * i[3])
+            prune.l1_unstructured(i[0], i[1], (sparsity - self.total_pruned) * i[2])
+
+        self.total_pruned = sparsity
 
 
     #@torch.autocast('cuda')

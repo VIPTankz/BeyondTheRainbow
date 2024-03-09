@@ -43,7 +43,7 @@ if __name__ == '__main__':
     parser.add_argument('--taus', type=int, default=8)
 
     # features still in testing
-    parser.add_argument('--pruning', type=int, default=0)
+    parser.add_argument('--pruning', type=int, default=0) # ONLY WORKS FOR DUELING
     parser.add_argument('--dueling', type=int, default=1)
     parser.add_argument('--munch', type=int, default=1)
     parser.add_argument('--ema', type=int, default=1)

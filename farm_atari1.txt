@@ -1,1 +1,1 @@
-python main.py --game BattleZone
+python main.py --game BattleZone --ema 0 --c 500
