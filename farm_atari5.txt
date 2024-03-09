@@ -1,1 +1,1 @@
-python main.py --game Qbert
+python main.py --game BattleZone --ema 0 --c 2000
