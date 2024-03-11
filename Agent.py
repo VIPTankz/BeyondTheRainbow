@@ -779,9 +779,6 @@ class Agent:
         if self.lr_decay:
             self.scheduler.step()
 
-        if np.random.random() > 0.8:
-            print(self.scheduler.get_lr())
-
         if not self.noisy:
             self.epsilon.update_eps()
 
