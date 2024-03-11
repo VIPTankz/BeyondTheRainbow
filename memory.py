@@ -102,9 +102,13 @@ class ReplayMemory():
     self.transitions = SegmentTree(capacity)  # Store transitions in a wrap-around cyclic buffer within a sum tree for querying priorities
 
   # Adds state and action at time t, reward and terminal at time t + 1
-  def append(self, state, action, reward, terminal):
+  def append(self, state, action, reward, terminal, prio=True):
     state = state[-1].to(dtype=torch.uint8, device=torch.device('cpu'))  # Only store last frame and discretise to save memory
-    self.transitions.append((self.t, state, action, reward, not terminal), self.transitions.max)  # Store new transition with maximum priority
+    if prio:
+      self.transitions.append((self.t, state, action, reward, not terminal), self.transitions.max)  # Store new transition with maximum priority
+    else:
+      # this is used for transitions we don't keep. Usually used if the environment crashes (Never used in Atari)
+      self.transitions.append((self.t, state, action, reward, not terminal), 0)
     self.t = 0 if terminal else self.t + 1  # Start new episodes with t = 0
 
   # Returns the transitions with blank states where appropriate

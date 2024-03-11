@@ -1,1 +1,1 @@
-python main.py --pruning 1
+python main.py --model_size 4

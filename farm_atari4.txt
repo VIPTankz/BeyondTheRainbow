@@ -1,1 +1,1 @@
-python main.py --game BattleZone --ema 0 --c 1500
+python main.py --lr_decay 0

@@ -56,7 +56,14 @@ class Agent:
         self.total_frames = total_frames
         self.num_envs = num_envs
 
-        self.total_grad_steps = self.total_frames / (self.num_envs / self.replay_ratio)
+        if self.testing:
+            self.min_sampling_size = 8000
+        else:
+            self.min_sampling_size = 200000
+
+        self.lr = lr
+
+        self.total_grad_steps = (self.total_frames - self.min_sampling_size) / (self.num_envs / self.replay_ratio)
 
         self.priority_weight_increase = (1 - self.per_beta) / self.total_grad_steps
 
@@ -76,18 +83,13 @@ class Agent:
 
         self.lr_decay = lr_decay
         if self.lr_decay:
-            self.lambda_lr = lambda frame: max(1.0 - frame / total_frames, 0)
+            self.lambda_lr = lambda frame: max(1.0 - frame / self.total_grad_steps, 0)
 
         self.chkpt_dir = ""
 
         # IMPORTANT params, check these
 
-        if self.testing:
-            self.min_sampling_size = 8000
-            self.lr = 0.0001
-        else:
-            self.min_sampling_size = 200000
-            self.lr = lr
+
 
         self.n = 3
         if discount_anneal:
@@ -302,6 +304,7 @@ class Agent:
             dormant_total = torch.sum(dormants)
 
             dormant_percent = dormant_total / len(values)
+            # Beware this gives dormant neurons as a decimal, not out of 100
             dormant_percents += dormant_percent
 
         dormant_percents /= count
@@ -775,6 +778,9 @@ class Agent:
 
         if self.lr_decay:
             self.scheduler.step()
+
+        if np.random.random() > 0.8:
+            print(self.scheduler.get_lr())
 
         if not self.noisy:
             self.epsilon.update_eps()

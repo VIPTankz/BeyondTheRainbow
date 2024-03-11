@@ -2,7 +2,7 @@ import json
 import numpy as np
 
 
-def get_entry(game, algo):
+def get_entry(game, algo, frames=50):
     # Path to the JSON file
     file_path = 'results\\' + game.lower() + '.json'
 
@@ -15,7 +15,7 @@ def get_entry(game, algo):
 
     # Process each entry
     for entry in data:
-        if entry['Agent'] == algo and 0 <= entry['Iteration'] <= 50:
+        if entry['Agent'] == algo and 0 <= entry['Iteration'] <= frames:
             iteration = entry['Iteration']
             value = entry['Value']
 
@@ -32,10 +32,9 @@ def get_entry(game, algo):
 
     # Convert the list of averages into a NumPy array
     values_array = np.array(averaged_values)
-    values_array = np.delete(values_array, 0).reshape(1, 50)
+    values_array = np.delete(values_array, 0).reshape(1, frames)
 
     # Check the shape and the array
-    print(values_array.shape)
     #print(values_array)
     return values_array
 

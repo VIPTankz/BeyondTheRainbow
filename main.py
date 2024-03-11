@@ -25,7 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('--frames', type=int, default=40000000)
 
     parser.add_argument('--maxpool_size', type=int, default=6)
-    parser.add_argument('--lr', type=float, default=1e-4)
+    parser.add_argument('--lr', type=float, default=5e-5)
     parser.add_argument('--testing', type=bool, default=False)
     parser.add_argument('--ema_tau', type=float, default=2.5e-4)
     parser.add_argument('--tr', type=int, default=0)
@@ -37,8 +37,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--impala', type=int, default=1)
     parser.add_argument('--discount', type=float, default=0.997)
-    parser.add_argument('--adamw', type=int, default=0)
-    parser.add_argument('--lr_decay', type=int, default=0)
+    parser.add_argument('--adamw', type=int, default=1)
+    parser.add_argument('--lr_decay', type=int, default=1)
     parser.add_argument('--per', type=int, default=1)
     parser.add_argument('--taus', type=int, default=8)
 
@@ -46,8 +46,8 @@ if __name__ == '__main__':
     parser.add_argument('--pruning', type=int, default=0) # ONLY WORKS FOR DUELING
     parser.add_argument('--dueling', type=int, default=1)
     parser.add_argument('--munch', type=int, default=1)
-    parser.add_argument('--ema', type=int, default=1)
-    parser.add_argument('--c', type=int, default=8000)  # this is the target replace
+    parser.add_argument('--ema', type=int, default=0)
+    parser.add_argument('--c', type=int, default=500)  # this is the target replace
     parser.add_argument('--model_size', type=int, default=2)
 
     # depends on munchausen
@@ -143,13 +143,13 @@ if __name__ == '__main__':
     if testing:
         num_envs = 4
         eval_envs = 2
-        eval_every = 20000
-        num_eval_episodes = 10
-        n_steps = 100000
+        eval_every = 30000
+        num_eval_episodes = 4
+        n_steps = 25000
         bs = 16
     else:
         num_envs = envs
-        eval_envs = 8
+        eval_envs = 16
         n_steps = frames
         num_eval_episodes = 100
         eval_every = 1000000
@@ -280,17 +280,17 @@ if __name__ == '__main__':
             dormants.append(agent.get_dormant_neurons())
 
             # get and save percent of dormant neurons
-            fname = agent_name + game + "Dormants.npy"
+            fname = agent_name + "Dormants.npy"
             if not testing:
                 np.save(fname, np.array(dormants))
 
             # get Parameter Norm
             param_norms.append(agent.calculate_parameter_norms())
-            fname = agent_name + game + "ParamNorms.npy"
+            fname = agent_name + "ParamNorms.npy"
             if not testing:
-                np.save(fname, np.array(dormants))
+                np.save(fname, np.array(param_norms))
 
-            fname = agent_name + game + "Experiment.npy"
+            fname = agent_name + "Experiment.npy"
             if not testing:
                 np.save(fname, np.array(scores))
 
