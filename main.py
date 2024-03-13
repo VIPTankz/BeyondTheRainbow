@@ -142,9 +142,9 @@ if __name__ == '__main__':
 
     if testing:
         num_envs = 4
-        eval_envs = 2
-        eval_every = 30000
-        num_eval_episodes = 4
+        eval_envs = 6
+        eval_every = 4000
+        num_eval_episodes = 10
         n_steps = 25000
         bs = 16
     else:
@@ -302,25 +302,29 @@ if __name__ == '__main__':
             eval_scores = np.array([0 for i in range(eval_envs)])
             eval_observation, eval_info = eval_env.reset()
 
+            evals_started = [i for i in range(eval_envs)]
+
             while eval_episodes < num_eval_episodes:
 
                 eval_action = agent.choose_action(eval_observation)  # this takes and return batches
 
                 eval_observation_, eval_reward, eval_done_, eval_trun_, eval_info = eval_env.step(eval_action)
 
-                # TRUNCATATION NOT IMPLEMENTED
+                # TRUNCATION NOT IMPLEMENTED
                 eval_done_ = np.logical_or(eval_done_, eval_trun_)
 
                 for i in range(eval_envs):
                     eval_scores[i] += eval_reward[i]
 
                     if eval_done_[i]:
-                        eval_episodes += 1
-                        if wandb_logs:
-                            wandb.log({"eval_scores": eval_scores[i]})
-                        evals.append(eval_scores[i])
+                        if evals_started[i] < num_eval_episodes:
+                            evals_started[i] = max(evals_started) + 1
+                            eval_episodes += 1
+                            if wandb_logs:
+                                wandb.log({"eval_scores": eval_scores[i]})
+                            evals.append(eval_scores[i])
 
-                        eval_scores[i] = 0
+                            eval_scores[i] = 0
 
                     if len(evals) == num_eval_episodes:
                         break
