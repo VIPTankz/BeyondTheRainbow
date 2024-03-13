@@ -89,8 +89,6 @@ class Agent:
 
         # IMPORTANT params, check these
 
-
-
         self.n = 3
         if discount_anneal:
             self.discount_anneal = True

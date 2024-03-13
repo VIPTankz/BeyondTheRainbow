@@ -1,1 +1,1 @@
-python main.py
+python main.py --lr 1e-4 --adamw 0 --lr_decay 1

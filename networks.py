@@ -757,12 +757,12 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         elif self.dueling:
             self.dueling = Dueling(
-                nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
+                nn.Sequential(linear_layer(self.conv_out_size, self.linear_size // 2),
                               nn.ReLU(),
-                              linear_layer(self.linear_size, 1)),
-                nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
+                              linear_layer(self.linear_size // 2, 1)),
+                nn.Sequential(linear_layer(self.conv_out_size, self.linear_size // 2),
                               nn.ReLU(),
-                              linear_layer(self.linear_size, actions))
+                              linear_layer(self.linear_size // 2, actions))
             )
         else:
             self.linear_layers = nn.Sequential(

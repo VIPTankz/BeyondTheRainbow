@@ -1,10 +1,11 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-games = ["BattleZone", "Qbert"]
+games = ["BattleZone"]
 frames = 40
-files = ["ema1_C8000"]
-filenames = ["BTR EMA No WD or LRD"]
+files = ["ema0_C500", "BTR_BattleZone40M_ema0_C500_WD", "BTR_BattleZone40M_ema0_C500_WD_LRD",
+         "BTR_BattleZone40M_ema0_C500_WD_LRD_MS4"]
+filenames = ["BTR", "BTR + WD", "BTR + WD + LRD", "BTR + WD + LRD + MS4"]
 
 data = []
 for file in files:

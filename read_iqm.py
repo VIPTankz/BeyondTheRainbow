@@ -8,9 +8,9 @@ human_scores = {"BattleZone": 37188, "DoubleDunk": -16, "NameThisGame": 8049, "P
 random_scores = {"BattleZone": 2360, "DoubleDunk": -19, "NameThisGame": 2292, "Phoenix": 761, "Qbert": 164}
 
 
-games = ["BattleZone", "Qbert"]
+games = ["BattleZone"]
 frames = 40
-files = ["ema1_C8000"]
+files = ["ema0_C250"] # this doesn't include BTR and GameName
 filenames = ["BTR EMA No WD or LRD"]
 
 use_extra_algos = True
@@ -116,11 +116,24 @@ for i in range(len(data)):
     else:
         plt.plot(smoothed_scores[i], linestyle='-', label=filenames[i], linewidth=2.)
 
+colors = ["blue", "red", "purple"]
 if use_extra_algos:
+
     for i in range(len(extra_algos)):
         # Plot the mean scores against the X values
 
-        plt.plot(extra_algos[i], linestyle='-', label=new_algos[i], linewidth=2.)
+        x = extra_algos[i]
+        print(x.shape)
+        y = np.arange(0, len(extra_algos[0]))
+
+        x1, y1 = x[:frames], y[:frames]  # Data for the first part
+        x2, y2 = x[frames - 1:], y[frames - 1:]
+
+        print(x1.shape)
+        print(x2.shape)
+
+        plt.plot(y1, x1, linestyle='-', label=new_algos[i], linewidth=2., color=colors[i])
+        plt.plot(y2, x2, linestyle=':', linewidth=2., color=colors[i])
 
 
 # Add labels and a title to the plot

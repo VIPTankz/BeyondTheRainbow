@@ -1,9 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-games = ["BattleZone", "Qbert"]
+games = ["BattleZone"]
 frames = 40
-files = ["ema1_C8000"]
+files = ["ema0_C500"]
 filenames = ["BTR EMA No WD or LRD"]
 
 data = []

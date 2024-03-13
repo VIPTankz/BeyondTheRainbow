@@ -25,7 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('--frames', type=int, default=40000000)
 
     parser.add_argument('--maxpool_size', type=int, default=6)
-    parser.add_argument('--lr', type=float, default=5e-5)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--testing', type=bool, default=False)
     parser.add_argument('--ema_tau', type=float, default=2.5e-4)
     parser.add_argument('--tr', type=int, default=0)
@@ -101,11 +101,11 @@ if __name__ == '__main__':
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Qbert
 
-    # tau_str = "{:e}".format(ema_tau)
-    # str(tau_str).replace(".", "").replace("0", "")
+    lr_str = "{:e}".format(lr)
+    lr_str = str(lr_str).replace(".", "").replace("0", "")
     frame_name = str(int(frames / 1000000)) + "M"
 
-    agent_name = "BTR_" + game + frame_name + "_ema" + str(ema) + "_C" + str(c)
+    agent_name = "BTR_" + game + frame_name + "_lr" + lr_str + "_WD" + str(adamw) + "_LRD" + str(lr_decay)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -149,7 +149,7 @@ if __name__ == '__main__':
         bs = 16
     else:
         num_envs = envs
-        eval_envs = 16
+        eval_envs = 32
         n_steps = frames
         num_eval_episodes = 100
         eval_every = 1000000
