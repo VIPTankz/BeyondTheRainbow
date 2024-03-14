@@ -646,7 +646,7 @@ class ImpalaCNNLargeIQN(nn.Module):
     """
     def __init__(self, in_depth, actions, model_size=2, spectral=True, device='cuda:0',
                  noisy=False, maxpool=False, num_tau=8, maxpool_size=6, dueling=True, sqrt=False, ede=False, moe=False,
-                 pruning=False):
+                 pruning=False, linear_size=512):
         super().__init__()
 
         self.start = time.time()
@@ -671,7 +671,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         if self.moe:
             self.output_channels = 32 * model_size
 
-        self.linear_size = 512
+        self.linear_size = linear_size
         self.num_tau = num_tau
 
         self.maxpool_size = maxpool_size

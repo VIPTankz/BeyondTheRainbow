@@ -45,6 +45,7 @@ if __name__ == '__main__':
     # features still in testing
     parser.add_argument('--pruning', type=int, default=0) # ONLY WORKS FOR DUELING
     parser.add_argument('--dueling', type=int, default=1)
+    parser.add_argument('--linear_size', type=int, default=512)
     parser.add_argument('--munch', type=int, default=1)
     parser.add_argument('--ema', type=int, default=0)
     parser.add_argument('--c', type=int, default=500)  # this is the target replace
@@ -83,6 +84,8 @@ if __name__ == '__main__':
     impala = args.impala
     discount = args.discount
 
+    linear_size = args.linear_size
+
     adamw = args.adamw
     sqrt = args.sqrt
     ede = args.ede
@@ -105,7 +108,8 @@ if __name__ == '__main__':
     lr_str = str(lr_str).replace(".", "").replace("0", "")
     frame_name = str(int(frames / 1000000)) + "M"
 
-    agent_name = "BTR_" + game + frame_name + "_lr" + lr_str + "_WD" + str(adamw) + "_LRD" + str(lr_decay)
+    agent_name = "BTR_" + game + frame_name + "_lr" + lr_str + "_WD" + str(adamw) + "_LRD" + str(lr_decay) +\
+                 "_lin_size" + str(linear_size)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -142,8 +146,8 @@ if __name__ == '__main__':
 
     if testing:
         num_envs = 4
-        eval_envs = 6
-        eval_every = 4000
+        eval_envs = 3
+        eval_every = 30000
         num_eval_episodes = 10
         n_steps = 25000
         bs = 16
@@ -172,7 +176,7 @@ if __name__ == '__main__':
                   maxpool_size=maxpool_size, ema=ema, trust_regions=tr, target_replace=c, ema_tau=ema_tau,
                   noisy=noisy, spectral=spectral, munch=munch, iqn=iqn, double=double, dueling=dueling, impala=impala,
                   discount=discount, adamw=adamw, ede=ede, sqrt=sqrt, discount_anneal=discount_anneal, lr_decay=lr_decay,
-                  per=per, taus=taus, moe=moe, pruning=pruning, model_size=model_size)
+                  per=per, taus=taus, moe=moe, pruning=pruning, model_size=model_size, linear_size=linear_size)
 
     if wandb_logs:
         wandb.init(
