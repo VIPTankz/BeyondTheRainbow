@@ -1,1 +1,1 @@
-python main.py --lr 1e-4 --adamw 1 --lr_decay 1
+python main.py --linear_size 1024 --adamw 1 --lr_decay 0 --dueling 1

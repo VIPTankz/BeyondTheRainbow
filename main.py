@@ -25,7 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('--frames', type=int, default=40000000)
 
     parser.add_argument('--maxpool_size', type=int, default=6)
-    parser.add_argument('--lr', type=float, default=5e-4)
+    parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--testing', type=bool, default=False)
     parser.add_argument('--ema_tau', type=float, default=2.5e-4)
     parser.add_argument('--tr', type=int, default=0)
@@ -37,8 +37,8 @@ if __name__ == '__main__':
 
     parser.add_argument('--impala', type=int, default=1)
     parser.add_argument('--discount', type=float, default=0.997)
-    parser.add_argument('--adamw', type=int, default=1)
-    parser.add_argument('--lr_decay', type=int, default=1)
+    parser.add_argument('--adamw', type=int, default=0)
+    parser.add_argument('--lr_decay', type=int, default=0)
     parser.add_argument('--per', type=int, default=1)
     parser.add_argument('--taus', type=int, default=8)
 
@@ -109,7 +109,7 @@ if __name__ == '__main__':
     frame_name = str(int(frames / 1000000)) + "M"
 
     agent_name = "BTR_" + game + frame_name + "_lr" + lr_str + "_WD" + str(adamw) + "_LRD" + str(lr_decay) +\
-                 "_lin_size" + str(linear_size)
+                 "_lin_size" + str(linear_size) + "_dueling" + str(dueling)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing

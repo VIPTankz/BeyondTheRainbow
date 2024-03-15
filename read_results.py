@@ -4,8 +4,11 @@ from read_rainbow import get_entry
 import matplotlib.patheffects as pe
 
 games = ["BattleZone"]
-files = ["BTR_BattleZone40M_ema0_C500", "BTR_BattleZone40M_ema0_C500_WD", "BTR_BattleZone40M_lr1e-4_WD1_LRD0"]
-filenames = ["BTR (1e-4)", "BTR + WD (5e-5)", "BTR + WD (1e-4) 256 units"]
+files = ["BTR_BattleZone40M_ema0_C500", "BTR_BattleZone40M_lr1e-4_WD1_LRD0", "BTR_BattleZone40M_lr1e-4_WD0_LRD1", "BTR_BattleZone40M_lr1e-4_WD1_LRD1",
+         "BTR_BattleZone40M_lr5e-4_WD1_LRD0", "BTR_BattleZone40M_lr5e-4_WD0_LRD1", "BTR_BattleZone40M_lr5e-4_WD1_LRD1"]
+
+filenames = ["BTR (1e-4) 512 units", "BTR + WD (1e-4)", "BTR + LRD (1e-4)", "BTR + WD + LRD (1e-4)",
+             "BTR + WD (5e-4)", "BTR + LRD (5e-4)", "BTR + WD + LRD (5e-4)"]
 frames = 40
 extra_algos = True
 if extra_algos:
@@ -78,7 +81,7 @@ for i in range(len(files) + 3 * extra_algos):
 # Add labels and a title to the plot
 plt.xlabel("Frames (M)")
 plt.ylabel("Score")
-plt.title("No LRD or WD")
+plt.title("256 lin units")
 
 # Show the grid
 plt.grid(True)
