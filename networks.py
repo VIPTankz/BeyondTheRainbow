@@ -757,12 +757,12 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         elif self.dueling:
             self.dueling = Dueling(
-                nn.Sequential(linear_layer(self.conv_out_size, self.linear_size // 2),
+                nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
                               nn.ReLU(),
-                              linear_layer(self.linear_size // 2, 1)),
-                nn.Sequential(linear_layer(self.conv_out_size, self.linear_size // 2),
+                              linear_layer(self.linear_size, 1)),
+                nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
                               nn.ReLU(),
-                              linear_layer(self.linear_size // 2, actions))
+                              linear_layer(self.linear_size, actions))
             )
         else:
             self.linear_layers = nn.Sequential(
@@ -963,9 +963,9 @@ class ImpalaCNNLargeIQN(nn.Module):
         #print('... saving checkpoint ...')
         torch.save(self.state_dict(), name + ".model")
 
-    def load_checkpoint(self):
+    def load_checkpoint(self, name):
         #print('... loading checkpoint ...')
-        self.load_state_dict(torch.load("current_model152582"))
+        self.load_state_dict(torch.load(name))
 
 def get_model(model_str, spectral_norm):
     if model_str == 'nature': return NatureCNN
