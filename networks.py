@@ -646,7 +646,7 @@ class ImpalaCNNLargeIQN(nn.Module):
     """
     def __init__(self, in_depth, actions, model_size=2, spectral=True, device='cuda:0',
                  noisy=False, maxpool=False, num_tau=8, maxpool_size=6, dueling=True, sqrt=False, ede=False, moe=False,
-                 pruning=False, linear_size=512):
+                 pruning=False, linear_size=1024, spectral_lin=False):
         super().__init__()
 
         self.start = time.time()
@@ -675,6 +675,11 @@ class ImpalaCNNLargeIQN(nn.Module):
         self.num_tau = num_tau
 
         self.maxpool_size = maxpool_size
+
+        self.spectral_lin = spectral_lin
+
+        if spectral_lin:
+            spec = torch.nn.utils.parametrizations.spectral_norm
 
         self.n_cos = 64
         self.pis = torch.FloatTensor([np.pi * i for i in range(self.n_cos)]).view(1, 1, self.n_cos).to(device)
@@ -756,20 +761,39 @@ class ImpalaCNNLargeIQN(nn.Module):
             self.l3 = nn.Linear(self.linear_size, actions)
 
         elif self.dueling:
-            self.dueling = Dueling(
-                nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
-                              nn.ReLU(),
-                              linear_layer(self.linear_size, 1)),
-                nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
-                              nn.ReLU(),
-                              linear_layer(self.linear_size, actions))
-            )
+            if not spectral_lin:
+                self.dueling = Dueling(
+                    nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
+                                  nn.ReLU(),
+                                  linear_layer(self.linear_size, 1)),
+                    nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
+                                  nn.ReLU(),
+                                  linear_layer(self.linear_size, actions))
+                )
+            else:
+                # torch.nn.utils.parametrizations.spectral_norm
+
+                self.dueling = Dueling(
+                    nn.Sequential(spec(linear_layer(self.conv_out_size, self.linear_size)),
+                                  nn.ReLU(),
+                                  spec(linear_layer(self.linear_size, 1))),
+                    nn.Sequential(spec(linear_layer(self.conv_out_size, self.linear_size)),
+                                  nn.ReLU(),
+                                  spec(linear_layer(self.linear_size, actions)))
+                )
         else:
-            self.linear_layers = nn.Sequential(
-                linear_layer(self.conv_out_size, self.linear_size),
-                nn.ReLU(),
-                linear_layer(self.linear_size, actions)
-            )
+            if not self.spectral_lin:
+                self.linear_layers = nn.Sequential(
+                    linear_layer(self.conv_out_size, self.linear_size),
+                    nn.ReLU(),
+                    linear_layer(self.linear_size, actions)
+                )
+            else:
+                self.linear_layers = nn.Sequential(
+                    spec(linear_layer(self.conv_out_size, self.linear_size)),
+                    nn.ReLU(),
+                    spec(linear_layer(self.linear_size, actions))
+                )
 
         if self.pruning:
             self.total_pruned = 0.0

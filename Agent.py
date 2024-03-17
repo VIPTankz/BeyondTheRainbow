@@ -35,10 +35,10 @@ class EpsilonGreedy():
 
 class Agent:
     def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=256
-                 , rr=1, maxpool_size=6, lr=5e-5, ema=False, trust_regions=False, target_replace=8000, ema_tau=0.001,
-                 noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.99,
+                 , rr=1, maxpool_size=6, lr=1e-4, ema=False, trust_regions=False, target_replace=500, ema_tau=0.001,
+                 noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.997,
                  adamw=False, ede=False, sqrt=False, discount_anneal=False, lr_decay=False, per=True, taus=8, moe=False,
-                 pruning=False, model_size=2, linear_size=512):
+                 pruning=False, model_size=2, linear_size=1024, spectral_lin=False):
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -106,10 +106,12 @@ class Agent:
 
         self.moe = moe  # mixture of experts (2024 deepmind) - This Does not Work Yet!
 
-        # do not use both spectral and noisy, they will interfere with each other
-        self.noisy = noisy
         self.spectral_norm = spectral  # rememberance of the bug that passed gpu tensor into env
         # and caused nans which somehow showed up in the PER sample function.
+
+        # don't use both of these, they will intefere with each other
+        self.spectral_lin = spectral_lin
+        self.noisy = noisy
 
         self.per_splits = 1
         if self.per_splits > num_envs:
@@ -180,17 +182,16 @@ class Agent:
         self.Vmin = -10
         self.N_ATOMS = 51
 
-        if not self.noisy:
-            if not self.loading_checkpoint and not self.testing:
-                self.eps_start = 1.0
-                self.eps_steps = (self.replay_ratio * 500000) / num_envs
-                self.eps_final = 0.01
-            else:
-                self.eps_start = 0.01
-                self.eps_steps = 250000
-                self.eps_final = 0.01
+        if not self.loading_checkpoint and not self.testing:
+            self.eps_start = 1.0
+            self.eps_steps = (self.replay_ratio * 500000) / num_envs
+            self.eps_final = 0.01
+        else:
+            self.eps_start = 0.01
+            self.eps_steps = 250000
+            self.eps_final = 0.01
 
-            self.epsilon = EpsilonGreedy(self.eps_start, self.eps_steps, self.eps_final, self.action_space)
+        self.epsilon = EpsilonGreedy(self.eps_start, self.eps_steps, self.eps_final, self.action_space)
 
         self.per = per
 
@@ -218,22 +219,23 @@ class Agent:
                 # This is the BTR Network
                 self.net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions, spectral=self.spectral_norm, device=self.device,
                                              noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size,
-                                             dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe, pruning=pruning, linear_size=self.linear_size)
+                                             dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe, pruning=pruning, linear_size=self.linear_size, spectral_lin=spectral_lin)
 
                 self.tgt_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions,spectral=self.spectral_norm, device=self.device,
                                              noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size,
-                                                 dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe, pruning=pruning, linear_size=self.linear_size)
+                                                 dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe, pruning=pruning, linear_size=self.linear_size, spectral_lin=spectral_lin)
 
-                self.test_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions, spectral=self.spectral_norm,
-                                                 device=self.device,
-                                                 noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size,
-                                                 num_tau=self.num_tau, maxpool_size=self.maxpool_size,
-                                                 dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe,
-                                                 pruning=pruning, linear_size=self.linear_size)
+                if self.pruning:
+                    self.test_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions, spectral=self.spectral_norm,
+                                                     device=self.device,
+                                                     noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size,
+                                                     num_tau=self.num_tau, maxpool_size=self.maxpool_size,
+                                                     dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe,
+                                                     pruning=pruning, linear_size=self.linear_size, spectral_lin=spectral_lin)
 
-                for name, layer in self.test_net.named_modules():
-                    if isinstance(layer, torch.nn.Conv2d) or isinstance(layer, torch.nn.Linear):
-                        layer.register_forward_hook(self.get_activation(name))
+                    for name, layer in self.test_net.named_modules():
+                        if isinstance(layer, torch.nn.Conv2d) or isinstance(layer, torch.nn.Linear):
+                            layer.register_forward_hook(self.get_activation(name))
 
         else:
             self.net = NatureIQN(self.input_dims[0], self.n_actions, device=self.device,
@@ -287,29 +289,32 @@ class Agent:
         self.test_net.load_state_dict(self.net.state_dict())
         self.outputs = {}
 
+        # this was previously wrong. Before I calculated percent per layer, then averaged over all layers
+        # Now, we get (total dead from all layers / total from all layers)
+
         states, rewards, actions, next_states, dones, weights, idxs, mems, mem = self.sample()
-        dormant_percents = 0
-        count = 0
+        all_dormants = 0
+        total_neurons = 0
         _, _ = self.test_net(states)
         for key, value in self.outputs.items():
-            count += 1
 
             values = torch.reshape(value, (self.batch_size, -1))
             values = torch.mean(values, dim=0)
 
             values = torch.abs(values / (torch.sum(values) * (1 / len(values))))
 
+            # values = torch.abs((values / torch.sum(values)) * (1 / len(values)))
+
             dormants = values <= self.dormant_tau
 
             dormant_total = torch.sum(dormants)
 
-            dormant_percent = dormant_total / len(values)
-            # Beware this gives dormant neurons as a decimal, not out of 100
-            dormant_percents += dormant_percent
+            all_dormants += dormant_total
+            total_neurons += len(dormants)
 
-        dormant_percents /= count
+        dormant_frac = all_dormants / total_neurons
 
-        return dormant_percents.item()
+        return dormant_frac.item()
 
     def calculate_parameter_norms(self, norm_type=2):
         self.test_net.load_state_dict(self.net.state_dict())
@@ -374,7 +379,7 @@ class Agent:
             x = T.argmax(qvals, dim=1).cpu()
             # this should contain (num_envs) different actions
 
-            if not self.noisy and not self.eval_mode and not self.ede:
+            if not self.eval_mode and not self.ede:
                 for i in range(len(observation)):
                     action = self.epsilon.choose_action()
                     if action is not None:
@@ -398,7 +403,7 @@ class Agent:
         self.tgt_net.load_state_dict(self.net.state_dict())
 
     def save_model(self):
-        self.net.save_checkpoint(self.agent_name + str(self.env_steps))
+        self.net.save_checkpoint(self.agent_name + "_" + str(self.env_steps // 1000000) + "M")
 
     def load_models(self):
         self.net.load_checkpoint()
@@ -540,9 +545,6 @@ class Agent:
                     self.replace_target_network()
         else:
             self.soft_update()
-
-        if np.random.random() > 0.99:
-            self.get_dormant_neurons()
 
         states, rewards, actions, next_states, dones, weights, idxs, mems, mem = self.sample()
 

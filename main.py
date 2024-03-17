@@ -33,11 +33,12 @@ if __name__ == '__main__':
     # the way parser.add_argument handles bools in dumb so we use int 0 or 1 instead
     parser.add_argument('--noisy', type=int, default=0)
     parser.add_argument('--spectral', type=int, default=1)
+    parser.add_argument('--spectral_lin', type=int, default=0)
     parser.add_argument('--iqn', type=int, default=1)
 
     parser.add_argument('--impala', type=int, default=1)
     parser.add_argument('--discount', type=float, default=0.997)
-    parser.add_argument('--adamw', type=int, default=0)
+    parser.add_argument('--adamw', type=int, default=1)
     parser.add_argument('--lr_decay', type=int, default=0)
     parser.add_argument('--per', type=int, default=1)
     parser.add_argument('--taus', type=int, default=8)
@@ -45,13 +46,13 @@ if __name__ == '__main__':
     # features still in testing
     parser.add_argument('--pruning', type=int, default=0) # ONLY WORKS FOR DUELING
     parser.add_argument('--dueling', type=int, default=1)
-    parser.add_argument('--linear_size', type=int, default=512)
+    parser.add_argument('--linear_size', type=int, default=1024)
     parser.add_argument('--munch', type=int, default=1)
     parser.add_argument('--ema', type=int, default=0)
     parser.add_argument('--c', type=int, default=500)  # this is the target replace
     parser.add_argument('--model_size', type=int, default=2)
 
-    # depends on munchausen
+    # not applicable when using munchausen
     parser.add_argument('--double', type=int, default=0)
 
     # likely dead improvements
@@ -76,6 +77,7 @@ if __name__ == '__main__':
 
     noisy = args.noisy
     spectral = args.spectral
+    spectral_lin = args.spectral_lin
     munch = args.munch
     iqn = args.iqn
     double = args.double
@@ -108,8 +110,9 @@ if __name__ == '__main__':
     lr_str = str(lr_str).replace(".", "").replace("0", "")
     frame_name = str(int(frames / 1000000)) + "M"
 
-    agent_name = "BTR_" + game + frame_name + "_lr" + lr_str + "_WD" + str(adamw) + "_LRD" + str(lr_decay) +\
-                 "_lin_size" + str(linear_size) + "_dueling" + str(dueling)
+    agent_name = "BTR_" + game + frame_name + "_lin_size" + str(linear_size) \
+            + "_noisy" + str(noisy) + "_spec_lin" + str(spectral_lin) + "_munch" + str(munch) + "_double" + str(double)
+
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -146,14 +149,14 @@ if __name__ == '__main__':
 
     if testing:
         num_envs = 4
-        eval_envs = 3
+        eval_envs = 2
         eval_every = 30000
-        num_eval_episodes = 10
+        num_eval_episodes = 5
         n_steps = 25000
         bs = 16
     else:
         num_envs = envs
-        eval_envs = 32
+        eval_envs = 48
         n_steps = frames
         num_eval_episodes = 100
         eval_every = 1000000
@@ -176,7 +179,8 @@ if __name__ == '__main__':
                   maxpool_size=maxpool_size, ema=ema, trust_regions=tr, target_replace=c, ema_tau=ema_tau,
                   noisy=noisy, spectral=spectral, munch=munch, iqn=iqn, double=double, dueling=dueling, impala=impala,
                   discount=discount, adamw=adamw, ede=ede, sqrt=sqrt, discount_anneal=discount_anneal, lr_decay=lr_decay,
-                  per=per, taus=taus, moe=moe, pruning=pruning, model_size=model_size, linear_size=linear_size)
+                  per=per, taus=taus, moe=moe, pruning=pruning, model_size=model_size, linear_size=linear_size,
+                  spectral_lin=spectral_lin)
 
     if wandb_logs:
         wandb.init(
@@ -281,7 +285,11 @@ if __name__ == '__main__':
 
             print("Evaluating")
 
-            dormants.append(agent.get_dormant_neurons())
+            # save model
+            if not testing:
+                agent.save_model()
+
+            """dormants.append(agent.get_dormant_neurons())
 
             # get and save percent of dormant neurons
             fname = agent_name + "Dormants.npy"
@@ -292,7 +300,7 @@ if __name__ == '__main__':
             param_norms.append(agent.calculate_parameter_norms())
             fname = agent_name + "ParamNorms.npy"
             if not testing:
-                np.save(fname, np.array(param_norms))
+                np.save(fname, np.array(param_norms))"""
 
             fname = agent_name + "Experiment.npy"
             if not testing:
@@ -346,6 +354,6 @@ if __name__ == '__main__':
             next_eval += eval_every
             agent.set_train_mode()
 
-    agent.save_model()
+
     if wandb_logs:
         wandb.finish()

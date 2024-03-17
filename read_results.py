@@ -4,11 +4,9 @@ from read_rainbow import get_entry
 import matplotlib.patheffects as pe
 
 games = ["BattleZone"]
-files = ["BTR_BattleZone40M_ema0_C500", "BTR_BattleZone40M_lr1e-4_WD1_LRD0", "BTR_BattleZone40M_lr1e-4_WD0_LRD1", "BTR_BattleZone40M_lr1e-4_WD1_LRD1",
-         "BTR_BattleZone40M_lr5e-4_WD1_LRD0", "BTR_BattleZone40M_lr5e-4_WD0_LRD1", "BTR_BattleZone40M_lr5e-4_WD1_LRD1"]
+files = [ "BTR_BattleZone40M_lr1e-4_WD0_LRD0_lin_size512_dueling1", "BTR_BattleZone40M_lr1e-4_WD1_LRD0_lin_size1024_dueling1"]
 
-filenames = ["BTR (1e-4) 512 units", "BTR + WD (1e-4)", "BTR + LRD (1e-4)", "BTR + WD + LRD (1e-4)",
-             "BTR + WD (5e-4)", "BTR + LRD (5e-4)", "BTR + WD + LRD (5e-4)"]
+filenames = ["BTR 512 (Previous Version)", "BTR 1024 + WD"]
 frames = 40
 extra_algos = True
 if extra_algos:

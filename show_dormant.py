@@ -3,8 +3,8 @@ import matplotlib.pyplot as plt
 
 games = ["BattleZone"]
 frames = 40
-files = ["ema0_C500"]
-filenames = ["BTR EMA No WD or LRD"]
+files = ["lr1e-4_WD0_LRD0_lin_size1024_dueling1"]
+filenames = ["BTR 1024"]
 
 data = []
 for file in files:
@@ -14,7 +14,7 @@ for file in files:
         for game in games:
             # can remove the extra game part in np.load with new results
             filename = "BTR_" + game + str(frames) + "M_" + file
-            new_file = np.load("results_final\\" + filename + "\\" + filename + game + "Dormants.npy")[frame] * 100
+            new_file = np.load("results_final\\" + filename + "\\" + filename + "Dormants.npy")[frame]
 
             per_game_scores.append(new_file)
 
@@ -69,7 +69,7 @@ for i in range(len(smoothed_scores)):
 
 # Add labels and a title to the plot
 plt.xlabel("Frames (M)")
-plt.ylabel("% Dormant Neurons")
+plt.ylabel("Dormant Neurons (Fraction)")
 
 # Show the grid
 plt.grid(True)

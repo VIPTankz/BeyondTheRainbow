@@ -1,1 +1,1 @@
-python main.py --linear_size 512 --adamw 0 --lr_decay 0 --dueling 1
+python main.py --frames 80000000
