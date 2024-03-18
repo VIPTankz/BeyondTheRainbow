@@ -251,7 +251,8 @@ class Agent:
             self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr, eps=0.005 / self.batch_size)  # 0.00015
 
         self.net.train()
-        #self.tgt_net.train()
+        if self.noisy:
+            self.tgt_net.train()
 
         for param in self.tgt_net.parameters():
             param.requires_grad = False
@@ -534,7 +535,7 @@ class Agent:
                     """elif self.total_frames * self.end_prune < self.env_steps:
                         self.net.prune(self.target_sparsity)"""
 
-        self.optimizer.zero_grad()
+
 
         if not self.soft_updates:
             if self.trust_regions:
@@ -545,6 +546,12 @@ class Agent:
                     self.replace_target_network()
         else:
             self.soft_update()
+
+        if self.noisy:
+            with torch.no_grad():
+                self.tgt_net.reset_noise()
+
+        self.optimizer.zero_grad()
 
         states, rewards, actions, next_states, dones, weights, idxs, mems, mem = self.sample()
 
@@ -560,10 +567,6 @@ class Agent:
         plt.imshow(states[2][0].unsqueeze(dim=0).cpu().permute(1, 2, 0))
         plt.show()
         """
-
-        if self.noisy:
-            with torch.no_grad():
-                self.tgt_net.reset_noise()
 
         if self.c51:
             distr_v, qvals_v = self.net.both(states)
@@ -781,8 +784,7 @@ class Agent:
         if self.lr_decay:
             self.scheduler.step()
 
-        if not self.noisy:
-            self.epsilon.update_eps()
+        self.epsilon.update_eps()
 
         self.grad_steps += 1
         if self.grad_steps % 10000 == 0:
