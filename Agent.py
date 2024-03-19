@@ -37,8 +37,28 @@ class Agent:
     def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=256
                  , rr=1, maxpool_size=6, lr=1e-4, ema=False, trust_regions=False, target_replace=500, ema_tau=0.001,
                  noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.997,
-                 adamw=False, ede=False, sqrt=False, discount_anneal=False, lr_decay=False, per=True, taus=8, moe=False,
-                 pruning=False, model_size=2, linear_size=1024, spectral_lin=False):
+                 adamw=True, ede=False, sqrt=False, discount_anneal=False, lr_decay=False, per=True, taus=8, moe=False,
+                 pruning=False, model_size=2, linear_size=1024, spectral_lin=False, rainbow=False):
+
+
+        if rainbow:
+            lr = 6.25e-5
+            spectral = False
+            munch = False
+            iqn = False
+            c51 = True #################
+            double = True
+            dueling = True
+            impala = False
+            discount = 0.99
+            adamw = False
+            per = True
+            noisy = True
+            linear_size = 512
+            self.per_alpha = 0.4
+        else:
+            self.per_alpha = 0.2
+            c51 = False
 
         self.n_actions = n_actions
         self.input_dims = input_dims
@@ -121,7 +141,7 @@ class Agent:
         self.dueling = dueling
 
         # Don't use both of these, they are mutually exclusive
-        self.c51 = False
+        self.c51 = c51
         self.iqn = iqn
 
         self.ede = ede  # NOT FINISHED
@@ -172,7 +192,7 @@ class Agent:
         if self.iqn:
             self.num_tau = taus
 
-        self.per_alpha = 0.2
+
         if self.loading_checkpoint:
             self.per_beta = 0.8
             self.min_sampling_size = 300000
@@ -251,8 +271,8 @@ class Agent:
             self.optimizer = optim.Adam(self.net.parameters(), lr=self.lr, eps=0.005 / self.batch_size)  # 0.00015
 
         self.net.train()
-        if self.noisy:
-            self.tgt_net.train()
+        #if self.noisy:
+        #self.tgt_net.train()
 
         for param in self.tgt_net.parameters():
             param.requires_grad = False

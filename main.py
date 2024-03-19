@@ -31,7 +31,7 @@ if __name__ == '__main__':
     parser.add_argument('--tr', type=int, default=0)
 
     # the way parser.add_argument handles bools in dumb so we use int 0 or 1 instead
-    parser.add_argument('--noisy', type=int, default=0)
+    parser.add_argument('--noisy', type=int, default=1)
     parser.add_argument('--spectral', type=int, default=1)
     parser.add_argument('--spectral_lin', type=int, default=0)
     parser.add_argument('--iqn', type=int, default=1)
@@ -110,9 +110,7 @@ if __name__ == '__main__':
     lr_str = str(lr_str).replace(".", "").replace("0", "")
     frame_name = str(int(frames / 1000000)) + "M"
 
-    agent_name = "BTR_" + game + frame_name + "_lin_size" + str(linear_size) \
-            + "_noisy" + str(noisy) + "_spec_lin" + str(spectral_lin) + "_munch" + str(munch) + "_double" + str(double)
-
+    agent_name = "BTR_" + game + frame_name + "_FullAgent"
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing

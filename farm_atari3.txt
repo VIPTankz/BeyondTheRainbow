@@ -1,1 +1,1 @@
-python main.py --munch 0
+python main.py --game Phoenix

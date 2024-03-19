@@ -96,7 +96,7 @@ if __name__ == "__main__":
     device = torch.device("cuda:0")
     inputs = next(iter(dataloader)).squeeze().to(device)
 
-    dormant_tau = 0.025
+    dormant_tau = 0.1
     outputs = {}
 
     # get number of dormants
@@ -104,6 +104,7 @@ if __name__ == "__main__":
     total_neurons = 0
     qvals = model1.qvals(inputs)
     for key, value in outputs.items():
+        print(value.shape)
         values = torch.reshape(value, (batch_size, -1))
         values = torch.mean(values, dim=0)
 

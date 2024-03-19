@@ -1,1 +1,1 @@
-python main.py --noisy 1
+python main.py --game DoubleDunk

@@ -1,1 +1,1 @@
-python main.py --munch 0 --double 1
+python main.py --game Qbert

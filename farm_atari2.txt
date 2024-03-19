@@ -1,1 +1,1 @@
-python main.py --spectral_lin 1
+python main.py --game NameThisGame
