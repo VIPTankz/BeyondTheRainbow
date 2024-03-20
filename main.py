@@ -110,7 +110,7 @@ if __name__ == '__main__':
     lr_str = str(lr_str).replace(".", "").replace("0", "")
     frame_name = str(int(frames / 1000000)) + "M"
 
-    agent_name = "BTR_" + game + frame_name + "_FullAgent"
+    agent_name = "BTR_" + game + frame_name + "_FullAgent" + "_noisy" + str(noisy)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
