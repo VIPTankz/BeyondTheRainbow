@@ -555,7 +555,9 @@ class Agent:
                     """elif self.total_frames * self.end_prune < self.env_steps:
                         self.net.prune(self.target_sparsity)"""
 
-
+        if self.noisy:
+            with torch.no_grad():
+                self.tgt_net.reset_noise()
 
         if not self.soft_updates:
             if self.trust_regions:
@@ -566,10 +568,6 @@ class Agent:
                     self.replace_target_network()
         else:
             self.soft_update()
-
-        if self.noisy:
-            with torch.no_grad():
-                self.tgt_net.reset_noise()
 
         self.optimizer.zero_grad()
 

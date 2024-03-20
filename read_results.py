@@ -6,9 +6,9 @@ import matplotlib.patheffects as pe
 games = ["BattleZone"]
 files = ["BTR_BattleZone40M_lr1e-4_WD1_LRD0_lin_size1024_dueling1",
          "BTR_BattleZone40M_lin_size1024_noisy0_spec_lin1_munch1_double0", "BTR_BattleZone40M_lin_size1024_noisy0_spec_lin0_munch0_double0",
-         "BTR_BattleZone40M_lin_size1024_noisy0_spec_lin0_munch0_double1"]
+         "BTR_BattleZone40M_lin_size1024_noisy0_spec_lin0_munch0_double1", "BTR_BattleZone40M_lin_size1024_noisy1_spec_lin0_munch1_double0"]
 
-filenames = ["BTR", "BTR + LinearSpecNorm", "BTR No-Munch wo/Double", "BTR No-Munch w/Double"]
+filenames = ["BTR", "BTR + LinearSpecNorm", "BTR No-Munch wo/Double", "BTR No-Munch w/Double", "BTR + Noisy"]
 frames = 40
 extra_algos = True
 if extra_algos:
