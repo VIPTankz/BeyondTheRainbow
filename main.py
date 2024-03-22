@@ -28,7 +28,8 @@ if __name__ == '__main__':
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--testing', type=bool, default=False)
     parser.add_argument('--ema_tau', type=float, default=2.5e-4)
-    parser.add_argument('--tr', type=int, default=0)
+    parser.add_argument('--munch', type=int, default=1)
+
 
     # the way parser.add_argument handles bools in dumb so we use int 0 or 1 instead
     parser.add_argument('--noisy', type=int, default=1)
@@ -42,15 +43,15 @@ if __name__ == '__main__':
     parser.add_argument('--lr_decay', type=int, default=0)
     parser.add_argument('--per', type=int, default=1)
     parser.add_argument('--taus', type=int, default=8)
+    parser.add_argument('--c', type=int, default=500)  # this is the target replace
+    parser.add_argument('--dueling', type=int, default=1)
 
     # features still in testing
-    parser.add_argument('--pruning', type=int, default=0)  # ONLY WORKS FOR DUELING
-    parser.add_argument('--dueling', type=int, default=1)
+
     parser.add_argument('--linear_size', type=int, default=1024)
-    parser.add_argument('--munch', type=int, default=1)
-    parser.add_argument('--ema', type=int, default=0)
-    parser.add_argument('--c', type=int, default=500)  # this is the target replace
     parser.add_argument('--model_size', type=int, default=2)
+    parser.add_argument('--tr', type=int, default=0)
+    parser.add_argument('--ncos', type=int, default=64)
 
     # not applicable when using munchausen
     parser.add_argument('--double', type=int, default=0)
@@ -60,6 +61,8 @@ if __name__ == '__main__':
     parser.add_argument('--ede', type=int, default=0)
     parser.add_argument('--discount_anneal', type=int, default=0)
     parser.add_argument('--moe', type=int, default=0)  # This Does not Work Yet!
+    parser.add_argument('--pruning', type=int, default=0)  # ONLY WORKS FOR DUELING
+    parser.add_argument('--ema', type=int, default=0)
 
     args = parser.parse_args()
 
@@ -100,6 +103,7 @@ if __name__ == '__main__':
     model_size = args.model_size
 
     frames = args.frames
+    ncos = args.ncos
 
     discount_anneal = args.discount_anneal
 
@@ -110,13 +114,16 @@ if __name__ == '__main__':
     lr_str = str(lr_str).replace(".", "").replace("0", "")
     frame_name = str(int(frames / 1000000)) + "M"
 
-    agent_name = "BTR_" + game + frame_name + "_FullAgent" + "_noisy" + str(noisy)
+
+    agent_name = "BTR_" + game + frame_name + "_FullAgent" + "_linsize" + str(linear_size)
+    if ncos > 64:
+        agent_name += "_ncos" + str(ncos)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
-    wandb_logs = not testing
+    wandb_logs = False
 
-    if wandb_logs:
+    if not testing:
         ###################### Making Dir Code
         # Initialize a counter to keep track of the suffix
         counter = 0
@@ -154,7 +161,7 @@ if __name__ == '__main__':
         bs = 16
     else:
         num_envs = envs
-        eval_envs = 48
+        eval_envs = 64
         n_steps = frames
         num_eval_episodes = 100
         eval_every = 1000000
@@ -178,7 +185,7 @@ if __name__ == '__main__':
                   noisy=noisy, spectral=spectral, munch=munch, iqn=iqn, double=double, dueling=dueling, impala=impala,
                   discount=discount, adamw=adamw, ede=ede, sqrt=sqrt, discount_anneal=discount_anneal, lr_decay=lr_decay,
                   per=per, taus=taus, moe=moe, pruning=pruning, model_size=model_size, linear_size=linear_size,
-                  spectral_lin=spectral_lin)
+                  spectral_lin=spectral_lin, ncos=ncos)
 
     if wandb_logs:
         wandb.init(

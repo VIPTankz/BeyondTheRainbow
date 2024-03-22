@@ -646,7 +646,7 @@ class ImpalaCNNLargeIQN(nn.Module):
     """
     def __init__(self, in_depth, actions, model_size=2, spectral=True, device='cuda:0',
                  noisy=False, maxpool=False, num_tau=8, maxpool_size=6, dueling=True, sqrt=False, ede=False, moe=False,
-                 pruning=False, linear_size=1024, spectral_lin=False):
+                 pruning=False, linear_size=1024, spectral_lin=False, ncos=64):
         super().__init__()
 
         self.start = time.time()
@@ -681,7 +681,7 @@ class ImpalaCNNLargeIQN(nn.Module):
         if spectral_lin:
             spec = torch.nn.utils.parametrizations.spectral_norm
 
-        self.n_cos = 64
+        self.n_cos = ncos
         self.pis = torch.FloatTensor([np.pi * i for i in range(self.n_cos)]).view(1, 1, self.n_cos).to(device)
 
         if noisy:

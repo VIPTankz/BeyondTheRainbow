@@ -1,1 +1,1 @@
-python main.py --game Phoenix
+python main.py --linear_size 512 --game Phoenix

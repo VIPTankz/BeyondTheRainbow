@@ -1,1 +1,1 @@
-python main.py
+python main.py --linear_size 512 --game BattleZone

@@ -1,1 +1,1 @@
-python main.py --linear_size 1536
+python main.py --ncos 128

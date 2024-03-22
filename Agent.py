@@ -38,7 +38,7 @@ class Agent:
                  , rr=1, maxpool_size=6, lr=1e-4, ema=False, trust_regions=False, target_replace=500, ema_tau=0.001,
                  noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.997,
                  adamw=True, ede=False, sqrt=False, discount_anneal=False, lr_decay=False, per=True, taus=8, moe=False,
-                 pruning=False, model_size=2, linear_size=1024, spectral_lin=False, rainbow=False):
+                 pruning=False, model_size=2, linear_size=1024, spectral_lin=False, ncos=64, rainbow=False):
 
 
         if rainbow:
@@ -144,6 +144,8 @@ class Agent:
         self.c51 = c51
         self.iqn = iqn
 
+        self.ncos = ncos
+
         self.ede = ede  # NOT FINISHED
         self.adamw = adamw
         self.sqrt = sqrt
@@ -237,13 +239,19 @@ class Agent:
                                              noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, maxpool_size=self.maxpool_size)
             else:
                 # This is the BTR Network
-                self.net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions, spectral=self.spectral_norm, device=self.device,
-                                             noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size,
-                                             dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe, pruning=pruning, linear_size=self.linear_size, spectral_lin=spectral_lin)
+                self.net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions,spectral=self.spectral_norm,
+                                                 device=self.device, noisy=self.noisy, maxpool=self.maxpool,
+                                                 model_size=self.model_size, num_tau=self.num_tau,
+                                                 maxpool_size=self.maxpool_size, dueling=dueling, sqrt=self.sqrt,
+                                                 ede=self.ede, moe=self.moe, pruning=pruning,
+                                                 linear_size=self.linear_size, spectral_lin=spectral_lin, ncos=self.ncos)
 
-                self.tgt_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions,spectral=self.spectral_norm, device=self.device,
-                                             noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size, num_tau=self.num_tau, maxpool_size=self.maxpool_size,
-                                                 dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe, pruning=pruning, linear_size=self.linear_size, spectral_lin=spectral_lin)
+                self.tgt_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions,spectral=self.spectral_norm,
+                                                 device=self.device, noisy=self.noisy, maxpool=self.maxpool,
+                                                 model_size=self.model_size, num_tau=self.num_tau,
+                                                 maxpool_size=self.maxpool_size, dueling=dueling, sqrt=self.sqrt,
+                                                 ede=self.ede, moe=self.moe, pruning=pruning,
+                                                 linear_size=self.linear_size, spectral_lin=spectral_lin, ncos=self.ncos)
 
                 if self.pruning:
                     self.test_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions, spectral=self.spectral_norm,
@@ -251,7 +259,8 @@ class Agent:
                                                      noisy=self.noisy, maxpool=self.maxpool, model_size=self.model_size,
                                                      num_tau=self.num_tau, maxpool_size=self.maxpool_size,
                                                      dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe,
-                                                     pruning=pruning, linear_size=self.linear_size, spectral_lin=spectral_lin)
+                                                     pruning=pruning, linear_size=self.linear_size, spectral_lin=spectral_lin,
+                                                      ncos=ncos)
 
                     for name, layer in self.test_net.named_modules():
                         if isinstance(layer, torch.nn.Conv2d) or isinstance(layer, torch.nn.Linear):
