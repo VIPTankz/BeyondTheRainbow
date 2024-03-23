@@ -8,10 +8,10 @@ human_scores = {"BattleZone": 37188, "DoubleDunk": -16, "NameThisGame": 8049, "P
 random_scores = {"BattleZone": 2360, "DoubleDunk": -19, "NameThisGame": 2292, "Phoenix": 761, "Qbert": 164}
 
 
-games = ["BattleZone"]
+games = ["BattleZone", "DoubleDunk", "NameThisGame", "Phoenix", "Qbert"]
 frames = 40
-files = ["ema0_C250"] # this doesn't include BTR and GameName
-filenames = ["BTR EMA No WD or LRD"]
+files = ["FullAgent"] # this doesn't include BTR and GameName
+filenames = ["BeyondTheRainbow (BTR)"]
 
 use_extra_algos = True
 
@@ -25,6 +25,9 @@ for file in files:
             filename = "BTR_" + game + str(frames) + "M_" + file
             new_file = np.load("results_final\\" + filename + "\\" + filename + game + "Evaluation.npy")[frame]
             mean_frame = np.mean(new_file, axis=0)
+            if frame == 39:
+                print("Final " + str(game) + ":")
+                print(mean_frame)
 
             human_norm = (mean_frame - random_scores[game]) / (human_scores[game] - random_scores[game])
 
@@ -37,7 +40,6 @@ for file in files:
         #per_game_scores = np.mean(per_game_scores)
 
         temp.append(per_game_scores)
-
 
     data.append(temp[:])
 
@@ -110,7 +112,7 @@ plt.figure(figsize=(10, 6))  # Set the figure size
 for i in range(len(data)):
     # Plot the mean scores against the X values
     if i == 0:
-        plt.plot(smoothed_scores[i], linestyle='-', label=filenames[i], linewidth=4.,
+        plt.plot(np.arange(0, 161, 4), smoothed_scores[i], linestyle='-', label=filenames[i], linewidth=4.,
                  path_effects=[pe.Stroke(linewidth=6, foreground='b'), pe.Normal()], color="gold")
 
     else:
@@ -126,8 +128,8 @@ if use_extra_algos:
         print(x.shape)
         y = np.arange(0, len(extra_algos[0]))
 
-        x1, y1 = x[:frames], y[:frames]  # Data for the first part
-        x2, y2 = x[frames - 1:], y[frames - 1:]
+        x1, y1 = x[:frames*4], y[:frames*4]  # Data for the first part
+        x2, y2 = x[frames*4 - 1:], y[frames*4 - 1:]
 
         print(x1.shape)
         print(x2.shape)
@@ -138,7 +140,9 @@ if use_extra_algos:
 
 # Add labels and a title to the plot
 plt.xlabel("Frames (M)")
-plt.ylabel("IQM Score")
+plt.ylabel("IQM Score Human Normalised Score")
+
+plt.xticks(np.arange(0, 201, 40))
 
 # Show the grid
 plt.grid(True)

@@ -206,7 +206,8 @@ class Agent:
 
         if not self.loading_checkpoint and not self.testing:
             self.eps_start = 1.0
-            self.eps_steps = (self.replay_ratio * 500000) / num_envs
+            # divided by 4 is due to frameskip
+            self.eps_steps = (self.replay_ratio * (500000 / 4)) / num_envs
             self.eps_final = 0.01
         else:
             self.eps_start = 0.01
@@ -435,9 +436,9 @@ class Agent:
     def save_model(self):
         self.net.save_checkpoint(self.agent_name + "_" + str(self.env_steps // 1000000) + "M")
 
-    def load_models(self):
-        self.net.load_checkpoint()
-        self.tgt_net.load_checkpoint()
+    def load_models(self, name):
+        self.net.load_checkpoint(name)
+        self.tgt_net.load_checkpoint(name)
 
 
     def soft_update(self):

@@ -17,7 +17,7 @@ from matplotlib.animation import FuncAnimation
 from matplotlib import animation
 import matplotlib.pyplot as plt
 # load models
-
+from torchsummary import summary
 
 """for name, _ in model1.named_modules():
     print(name)
@@ -89,7 +89,7 @@ if __name__ == "__main__":
                               noisy=False, maxpool=True, model_size=2, num_tau=8, maxpool_size=6,
                               dueling=True, sqrt=False, ede=False, moe=False, pruning=False, linear_size=1024,
                               spectral_lin=True)
-
+    summary(model, (4, 84, 84))
     # Number of models
     num_models = 24
 
@@ -113,6 +113,8 @@ if __name__ == "__main__":
                               noisy=False, maxpool=True, model_size=2, num_tau=8, maxpool_size=6,
                               dueling=True, sqrt=False, ede=False, moe=False, pruning=False, linear_size=1024,
                               spectral_lin=False)
+
+
 
     # Load each model, compute q-values, then frequencies
     for i in range(1, num_models + 1):  # Start from 1 to 18

@@ -18,18 +18,17 @@ def make_env(envs_create):
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
-    parser.add_argument('--game', type=str, default="BattleZone")  # This is BattleZone
+    parser.add_argument('--game', type=str, default="BattleZone")
     parser.add_argument('--envs', type=int, default=64)
     parser.add_argument('--bs', type=int, default=256)
     parser.add_argument('--rr', type=int, default=1)
-    parser.add_argument('--frames', type=int, default=40000000)
+    parser.add_argument('--frames', type=int, default=50000000)
 
     parser.add_argument('--maxpool_size', type=int, default=6)
     parser.add_argument('--lr', type=float, default=1e-4)
     parser.add_argument('--testing', type=bool, default=False)
     parser.add_argument('--ema_tau', type=float, default=2.5e-4)
     parser.add_argument('--munch', type=int, default=1)
-
 
     # the way parser.add_argument handles bools in dumb so we use int 0 or 1 instead
     parser.add_argument('--noisy', type=int, default=1)
@@ -114,10 +113,9 @@ if __name__ == '__main__':
     lr_str = str(lr_str).replace(".", "").replace("0", "")
     frame_name = str(int(frames / 1000000)) + "M"
 
+    include_evals = False
 
     agent_name = "BTR_" + game + frame_name + "_FullAgent" + "_linsize" + str(linear_size)
-    if ncos > 64:
-        agent_name += "_ncos" + str(ncos)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -311,53 +309,55 @@ if __name__ == '__main__':
             if not testing:
                 np.save(fname, np.array(scores))
 
-            eval_env = make_env(eval_envs)
+            if include_evals:
 
-            agent.set_eval_mode()
-            evals = []
-            eval_episodes = 0
-            eval_scores = np.array([0 for i in range(eval_envs)])
-            eval_observation, eval_info = eval_env.reset()
+                eval_env = make_env(eval_envs)
 
-            evals_started = [i for i in range(eval_envs)]
+                agent.set_eval_mode()
+                evals = []
+                eval_episodes = 0
+                eval_scores = np.array([0 for i in range(eval_envs)])
+                eval_observation, eval_info = eval_env.reset()
 
-            while eval_episodes < num_eval_episodes:
+                evals_started = [i for i in range(eval_envs)]
 
-                eval_action = agent.choose_action(eval_observation)  # this takes and return batches
+                while eval_episodes < num_eval_episodes:
 
-                eval_observation_, eval_reward, eval_done_, eval_trun_, eval_info = eval_env.step(eval_action)
+                    eval_action = agent.choose_action(eval_observation)  # this takes and return batches
 
-                # TRUNCATION NOT IMPLEMENTED
-                eval_done_ = np.logical_or(eval_done_, eval_trun_)
+                    eval_observation_, eval_reward, eval_done_, eval_trun_, eval_info = eval_env.step(eval_action)
 
-                for i in range(eval_envs):
-                    eval_scores[i] += eval_reward[i]
+                    # TRUNCATION NOT IMPLEMENTED
+                    eval_done_ = np.logical_or(eval_done_, eval_trun_)
 
-                    if eval_done_[i]:
-                        if evals_started[i] < num_eval_episodes:
-                            evals_started[i] = max(evals_started) + 1
-                            eval_episodes += 1
-                            if wandb_logs:
-                                wandb.log({"eval_scores": eval_scores[i]})
-                            evals.append(eval_scores[i])
+                    for i in range(eval_envs):
+                        eval_scores[i] += eval_reward[i]
 
-                            eval_scores[i] = 0
+                        if eval_done_[i]:
+                            if evals_started[i] < num_eval_episodes:
+                                evals_started[i] = max(evals_started) + 1
+                                eval_episodes += 1
+                                if wandb_logs:
+                                    wandb.log({"eval_scores": eval_scores[i]})
+                                evals.append(eval_scores[i])
 
-                    if len(evals) == num_eval_episodes:
-                        break
+                                eval_scores[i] = 0
 
-                eval_observation = eval_observation_
+                        if len(evals) == num_eval_episodes:
+                            break
 
-                for stream in range(eval_envs):
-                    if eval_done_[stream]:
-                        eval_observation[stream] = eval_info["final_observation"][stream]
+                    eval_observation = eval_observation_
 
-            evals_total.append(evals)
-            fname = agent_name + game + "Evaluation.npy"
-            if not testing:
-                np.save(fname, np.array(evals_total))
-            next_eval += eval_every
-            agent.set_train_mode()
+                    for stream in range(eval_envs):
+                        if eval_done_[stream]:
+                            eval_observation[stream] = eval_info["final_observation"][stream]
+
+                evals_total.append(evals)
+                fname = agent_name + game + "Evaluation.npy"
+                if not testing:
+                    np.save(fname, np.array(evals_total))
+                next_eval += eval_every
+                agent.set_train_mode()
 
 
     if wandb_logs:
