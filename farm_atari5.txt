@@ -1,1 +1,1 @@
-python main.py --ncos 128
+python main.py --gelu 1

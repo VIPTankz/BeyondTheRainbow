@@ -7,11 +7,10 @@ import scipy
 human_scores = {"BattleZone": 37188, "DoubleDunk": -16, "NameThisGame": 8049, "Phoenix": 7243, "Qbert": 13455}
 random_scores = {"BattleZone": 2360, "DoubleDunk": -19, "NameThisGame": 2292, "Phoenix": 761, "Qbert": 164}
 
-
-games = ["BattleZone", "DoubleDunk", "NameThisGame", "Phoenix", "Qbert"]
+games = ["BattleZone", "DoubleDunk", "Qbert"]  # "NameThisGame", "Phoenix",
 frames = 40
-files = ["FullAgent"] # this doesn't include BTR and GameName
-filenames = ["BeyondTheRainbow (BTR)"]
+files = ["FullAgent", "FullAgent_linsize512"] # this doesn't include BTR and GameName
+filenames = ["BeyondTheRainbow (BTR)", "Lin Size 512"]
 
 use_extra_algos = True
 
@@ -116,7 +115,7 @@ for i in range(len(data)):
                  path_effects=[pe.Stroke(linewidth=6, foreground='b'), pe.Normal()], color="gold")
 
     else:
-        plt.plot(smoothed_scores[i], linestyle='-', label=filenames[i], linewidth=2.)
+        plt.plot(np.arange(0, 161, 4), smoothed_scores[i], linestyle='-', label=filenames[i], linewidth=2.)
 
 colors = ["blue", "red", "purple"]
 if use_extra_algos:

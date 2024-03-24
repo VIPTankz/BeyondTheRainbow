@@ -317,10 +317,10 @@ class ImpalaCNNResidual(nn.Module):
     """
     Simple residual block used in the large IMPALA CNN.
     """
-    def __init__(self, depth, norm_func):
+    def __init__(self, depth, norm_func, activation=nn.ReLU):
         super().__init__()
 
-        self.relu = nn.ReLU()
+        self.activation = activation()
 
         self.conv_0 = norm_func(nn.Conv2d(in_channels=depth, out_channels=depth, kernel_size=3, stride=1, padding=1))
         self.conv_1 = norm_func(nn.Conv2d(in_channels=depth, out_channels=depth, kernel_size=3, stride=1, padding=1))
@@ -328,10 +328,10 @@ class ImpalaCNNResidual(nn.Module):
     #@torch.autocast('cuda')
     def forward(self, x):
         #if x.abs().sum().item() != 0:
-        x_ = self.conv_0(self.relu(x))
+        x_ = self.conv_0(self.activation(x))
         #if x_.abs().sum().item() == 0:
         #raise Exception("0 tensor found within residual layer!")
-        x_ = self.conv_1(self.relu(x_))
+        x_ = self.conv_1(self.activation(x_))
         return x + x_
 
 
@@ -339,13 +339,13 @@ class ImpalaCNNBlock(nn.Module):
     """
     Three of these blocks are used in the large IMPALA CNN.
     """
-    def __init__(self, depth_in, depth_out, norm_func):
+    def __init__(self, depth_in, depth_out, norm_func, activation=nn.ReLU):
         super().__init__()
 
         self.conv = nn.Conv2d(in_channels=depth_in, out_channels=depth_out, kernel_size=3, stride=1, padding=1)
         self.max_pool = nn.MaxPool2d(3, 2, padding=1)
-        self.residual_0 = ImpalaCNNResidual(depth_out, norm_func=norm_func)
-        self.residual_1 = ImpalaCNNResidual(depth_out, norm_func=norm_func)
+        self.residual_0 = ImpalaCNNResidual(depth_out, norm_func=norm_func, activation=activation)
+        self.residual_1 = ImpalaCNNResidual(depth_out, norm_func=norm_func, activation=activation)
 
     #@torch.autocast('cuda')
     def forward(self, x):
@@ -646,7 +646,7 @@ class ImpalaCNNLargeIQN(nn.Module):
     """
     def __init__(self, in_depth, actions, model_size=2, spectral=True, device='cuda:0',
                  noisy=False, maxpool=False, num_tau=8, maxpool_size=6, dueling=True, sqrt=False, ede=False, moe=False,
-                 pruning=False, linear_size=1024, spectral_lin=False, ncos=64):
+                 pruning=False, linear_size=1024, spectral_lin=False, ncos=64, gelu=False):
         super().__init__()
 
         self.start = time.time()
@@ -678,6 +678,11 @@ class ImpalaCNNLargeIQN(nn.Module):
 
         self.spectral_lin = spectral_lin
 
+        if gelu:
+            activation = nn.GELU
+        else:
+            activation = nn.ReLU
+
         if spectral_lin:
             spec = torch.nn.utils.parametrizations.spectral_norm
 
@@ -697,9 +702,9 @@ class ImpalaCNNLargeIQN(nn.Module):
             norm_func = identity
 
         self.conv = nn.Sequential(
-            ImpalaCNNBlock(in_depth, 16*model_size, norm_func=norm_func),
-            ImpalaCNNBlock(16*model_size, 32*model_size, norm_func=norm_func),
-            ImpalaCNNBlock(32*model_size, 32*model_size, norm_func=norm_func),
+            ImpalaCNNBlock(in_depth, 16*model_size, norm_func=norm_func, activation=activation),
+            ImpalaCNNBlock(16*model_size, 32*model_size, norm_func=norm_func, activation=activation),
+            ImpalaCNNBlock(32*model_size, 32*model_size, norm_func=norm_func, activation=activation),
             nn.ReLU()
         )
 
@@ -764,10 +769,10 @@ class ImpalaCNNLargeIQN(nn.Module):
             if not spectral_lin:
                 self.dueling = Dueling(
                     nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
-                                  nn.ReLU(),
+                                  activation(),
                                   linear_layer(self.linear_size, 1)),
                     nn.Sequential(linear_layer(self.conv_out_size, self.linear_size),
-                                  nn.ReLU(),
+                                  activation(),
                                   linear_layer(self.linear_size, actions))
                 )
             else:
@@ -775,23 +780,23 @@ class ImpalaCNNLargeIQN(nn.Module):
 
                 self.dueling = Dueling(
                     nn.Sequential(spec(linear_layer(self.conv_out_size, self.linear_size)),
-                                  nn.ReLU(),
+                                  activation(),
                                   spec(linear_layer(self.linear_size, 1))),
                     nn.Sequential(spec(linear_layer(self.conv_out_size, self.linear_size)),
-                                  nn.ReLU(),
+                                  activation(),
                                   spec(linear_layer(self.linear_size, actions)))
                 )
         else:
             if not self.spectral_lin:
                 self.linear_layers = nn.Sequential(
                     linear_layer(self.conv_out_size, self.linear_size),
-                    nn.ReLU(),
+                    activation(),
                     linear_layer(self.linear_size, actions)
                 )
             else:
                 self.linear_layers = nn.Sequential(
                     spec(linear_layer(self.conv_out_size, self.linear_size)),
-                    nn.ReLU(),
+                    activation(),
                     spec(linear_layer(self.linear_size, actions))
                 )
 

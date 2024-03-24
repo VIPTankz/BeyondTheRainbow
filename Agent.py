@@ -38,7 +38,7 @@ class Agent:
                  , rr=1, maxpool_size=6, lr=1e-4, ema=False, trust_regions=False, target_replace=500, ema_tau=0.001,
                  noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.997,
                  adamw=True, ede=False, sqrt=False, discount_anneal=False, lr_decay=False, per=True, taus=8, moe=False,
-                 pruning=False, model_size=2, linear_size=1024, spectral_lin=False, ncos=64, rainbow=False):
+                 pruning=False, model_size=2, linear_size=1024, spectral_lin=False, ncos=64, rainbow=False, gelu=False):
 
 
         if rainbow:
@@ -56,6 +56,7 @@ class Agent:
             noisy = True
             linear_size = 512
             self.per_alpha = 0.4
+            gelu = False
         else:
             self.per_alpha = 0.2
             c51 = False
@@ -90,6 +91,7 @@ class Agent:
         self.action_space = [i for i in range(self.n_actions)]
         self.learn_step_counter = 0
         self.pruning = pruning
+        self.gelu = gelu
         if self.pruning:
             # these are percentages of training where we prune
             self.start_prune = 0.2
@@ -245,14 +247,16 @@ class Agent:
                                                  model_size=self.model_size, num_tau=self.num_tau,
                                                  maxpool_size=self.maxpool_size, dueling=dueling, sqrt=self.sqrt,
                                                  ede=self.ede, moe=self.moe, pruning=pruning,
-                                                 linear_size=self.linear_size, spectral_lin=spectral_lin, ncos=self.ncos)
+                                                 linear_size=self.linear_size, spectral_lin=spectral_lin, ncos=self.ncos,
+                                                 gelu=self.gelu)
 
                 self.tgt_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions,spectral=self.spectral_norm,
                                                  device=self.device, noisy=self.noisy, maxpool=self.maxpool,
                                                  model_size=self.model_size, num_tau=self.num_tau,
                                                  maxpool_size=self.maxpool_size, dueling=dueling, sqrt=self.sqrt,
                                                  ede=self.ede, moe=self.moe, pruning=pruning,
-                                                 linear_size=self.linear_size, spectral_lin=spectral_lin, ncos=self.ncos)
+                                                 linear_size=self.linear_size, spectral_lin=spectral_lin, ncos=self.ncos,
+                                                 gelu=self.gelu)
 
                 if self.pruning:
                     self.test_net = ImpalaCNNLargeIQN(self.input_dims[0], self.n_actions, spectral=self.spectral_norm,
@@ -261,7 +265,7 @@ class Agent:
                                                      num_tau=self.num_tau, maxpool_size=self.maxpool_size,
                                                      dueling=dueling, sqrt=self.sqrt, ede=self.ede, moe=self.moe,
                                                      pruning=pruning, linear_size=self.linear_size, spectral_lin=spectral_lin,
-                                                      ncos=ncos)
+                                                      ncos=ncos, gelu=self.gelu)
 
                     for name, layer in self.test_net.named_modules():
                         if isinstance(layer, torch.nn.Conv2d) or isinstance(layer, torch.nn.Linear):
@@ -434,7 +438,7 @@ class Agent:
         self.tgt_net.load_state_dict(self.net.state_dict())
 
     def save_model(self):
-        self.net.save_checkpoint(self.agent_name + "_" + str(self.env_steps // 1000000) + "M")
+        self.net.save_checkpoint(self.agent_name + "_" + str(int((self.env_steps // 1000000) * 4)) + "M")
 
     def load_models(self, name):
         self.net.load_checkpoint(name)

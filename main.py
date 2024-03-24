@@ -9,10 +9,11 @@ import wandb
 import os
 import argparse, sys
 from Agent import Agent
+from AtariPreprocessing import AtariPreprocessing
 from torch.profiler import profile, record_function, ProfilerActivity
 def make_env(envs_create):
     return gym.vector.AsyncVectorEnv([lambda: gym.wrappers.FrameStack(
-        gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(envs_create)],
+        AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(envs_create)],
                                      context="spawn")
 
 if __name__ == '__main__':
@@ -22,7 +23,7 @@ if __name__ == '__main__':
     parser.add_argument('--envs', type=int, default=64)
     parser.add_argument('--bs', type=int, default=256)
     parser.add_argument('--rr', type=int, default=1)
-    parser.add_argument('--frames', type=int, default=50000000)
+    parser.add_argument('--frames', type=int, default=200000000)
 
     parser.add_argument('--maxpool_size', type=int, default=6)
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -47,10 +48,10 @@ if __name__ == '__main__':
 
     # features still in testing
 
-    parser.add_argument('--linear_size', type=int, default=1024)
+    parser.add_argument('--linear_size', type=int, default=512)
     parser.add_argument('--model_size', type=int, default=2)
     parser.add_argument('--tr', type=int, default=0)
-    parser.add_argument('--ncos', type=int, default=64)
+    parser.add_argument('--gelu', type=int, default=0)
 
     # not applicable when using munchausen
     parser.add_argument('--double', type=int, default=0)
@@ -62,6 +63,7 @@ if __name__ == '__main__':
     parser.add_argument('--moe', type=int, default=0)  # This Does not Work Yet!
     parser.add_argument('--pruning', type=int, default=0)  # ONLY WORKS FOR DUELING
     parser.add_argument('--ema', type=int, default=0)
+    parser.add_argument('--ncos', type=int, default=64)
 
     args = parser.parse_args()
 
@@ -100,8 +102,11 @@ if __name__ == '__main__':
     taus = args.taus
     pruning = args.pruning
     model_size = args.model_size
+    gelu = args.gelu
 
-    frames = args.frames
+    frames = args.frames // 4  # "frames" is the actual number of frames. This variable frames represents steps
+    # apologies for confusing name
+
     ncos = args.ncos
 
     discount_anneal = args.discount_anneal
@@ -115,7 +120,9 @@ if __name__ == '__main__':
 
     include_evals = False
 
-    agent_name = "BTR_" + game + frame_name + "_FullAgent" + "_linsize" + str(linear_size)
+    agent_name = "BTR_" + game + frame_name + "_FinalAgent"
+    if gelu:
+        agent_name += "_gelu1"
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -153,7 +160,7 @@ if __name__ == '__main__':
     if testing:
         num_envs = 4
         eval_envs = 2
-        eval_every = 30000
+        eval_every = 10000
         num_eval_episodes = 5
         n_steps = 25000
         bs = 16
@@ -162,7 +169,7 @@ if __name__ == '__main__':
         eval_envs = 64
         n_steps = frames
         num_eval_episodes = 100
-        eval_every = 1000000
+        eval_every = 250000  # evaluate every 250k steps, equal to 1M Frames
 
     next_eval = eval_every
 
@@ -183,7 +190,7 @@ if __name__ == '__main__':
                   noisy=noisy, spectral=spectral, munch=munch, iqn=iqn, double=double, dueling=dueling, impala=impala,
                   discount=discount, adamw=adamw, ede=ede, sqrt=sqrt, discount_anneal=discount_anneal, lr_decay=lr_decay,
                   per=per, taus=taus, moe=moe, pruning=pruning, model_size=model_size, linear_size=linear_size,
-                  spectral_lin=spectral_lin, ncos=ncos)
+                  spectral_lin=spectral_lin, ncos=ncos, gelu=gelu)
 
     if wandb_logs:
         wandb.init(
@@ -246,7 +253,6 @@ if __name__ == '__main__':
 
         observation_, reward, done_, trun_, info = env.step_wait()
 
-        #TRUNCATATION NOT IMPLEMENTED
         done_ = np.logical_or(done_, trun_)
 
         for i in range(num_envs):
@@ -265,7 +271,10 @@ if __name__ == '__main__':
         reward = np.clip(reward, -1., 1.)
 
         for stream in range(num_envs):
-            agent.store_transition(observation[stream], action[stream], reward[stream], done_[stream], stream=stream)
+            terminal_in_buffer = done_[stream] or info["lost_life"][stream]
+
+            agent.store_transition(observation[stream], action[stream], reward[stream], terminal_in_buffer, stream=stream)
+            # before terminal_in_buffer was just done_[stream].
 
         observation = observation_
 
@@ -356,8 +365,10 @@ if __name__ == '__main__':
                 fname = agent_name + game + "Evaluation.npy"
                 if not testing:
                     np.save(fname, np.array(evals_total))
-                next_eval += eval_every
+
                 agent.set_train_mode()
+
+            next_eval += eval_every
 
 
     if wandb_logs:
