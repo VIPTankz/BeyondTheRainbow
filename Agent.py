@@ -438,7 +438,7 @@ class Agent:
         self.tgt_net.load_state_dict(self.net.state_dict())
 
     def save_model(self):
-        self.net.save_checkpoint(self.agent_name + "_" + str(int((self.env_steps // 1000000) * 4)) + "M")
+        self.net.save_checkpoint(self.agent_name + "_" + str(int((self.env_steps // 250000))) + "M")
 
     def load_models(self, name):
         self.net.load_checkpoint(name)
