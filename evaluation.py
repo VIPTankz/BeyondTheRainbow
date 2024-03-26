@@ -6,9 +6,8 @@ import os
 import argparse
 from Agent import Agent
 def make_env(envs_create):
-    return gym.vector.AsyncVectorEnv([lambda: gym.wrappers.FrameStack(
-        gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(envs_create)],
-                                     context="spawn")
+    return gym.vector.SyncVectorEnv([lambda: gym.wrappers.FrameStack(
+        gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(envs_create)])
 
 if __name__ == '__main__':
 
@@ -164,6 +163,8 @@ if __name__ == '__main__':
     gpu = "0"
     device = torch.device('cuda:' + gpu if torch.cuda.is_available() else 'cpu')
     print("Device: " + str(device))
+
+    print("Eval Envs: " + str(eval_envs))
 
     eval_env = make_env(eval_envs)
 
