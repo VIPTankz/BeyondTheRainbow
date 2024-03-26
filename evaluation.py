@@ -1,14 +1,10 @@
 
 import numpy as np
-import time
-from copy import deepcopy
-import sys
 import torch
 import gymnasium as gym
 import os
-import argparse, sys
+import argparse
 from Agent import Agent
-from torch.profiler import profile, record_function, ProfilerActivity
 def make_env(envs_create):
     return gym.vector.AsyncVectorEnv([lambda: gym.wrappers.FrameStack(
         gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(envs_create)],
