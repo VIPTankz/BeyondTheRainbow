@@ -87,7 +87,7 @@ if __name__ == "__main__":
 
     model = ImpalaCNNLargeIQN(4, 18, spectral=True, device=torch.device("cuda:0"),
                               noisy=False, maxpool=True, model_size=2, num_tau=8, maxpool_size=6,
-                              dueling=True, sqrt=False, ede=False, moe=False, pruning=False, linear_size=1024,
+                              dueling=True, sqrt=False, ede=False, moe=False, pruning=False, linear_size=512,
                               spectral_lin=True)
     summary(model, (4, 84, 84))
     # Number of models
