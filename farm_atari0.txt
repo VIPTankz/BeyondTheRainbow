@@ -1,1 +1,1 @@
-python main.py --game BattleZone
+python evaluation.py --game BattleZone --name FinalAgent
