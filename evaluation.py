@@ -160,7 +160,7 @@ if __name__ == '__main__':
         eval_envs = 4
         num_eval_episodes = 5
     else:
-        eval_envs = 50
+        eval_envs = 34
         num_eval_episodes = 100
 
     print("Currently Playing Game: " + str(game))
@@ -188,6 +188,7 @@ if __name__ == '__main__':
 
         evaluation += 1
         print("Starting Evaluation " + str(evaluation) + "M")
+        print(agent_name + "_" + str(evaluation) + "M.model")
 
         agent.load_models(agent_name + "_" + str(evaluation) + "M.model")
 
