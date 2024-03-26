@@ -760,7 +760,6 @@ class Agent:
             if self.per:
                 weights = weights.unsqueeze(1)
 
-
             # calculate log-pi
             logsum = torch.logsumexp(
                 (q_t_n - q_t_n.max(1)[0].unsqueeze(-1)) / self.entropy_tau, 1).unsqueeze(-1)  # logsum trick

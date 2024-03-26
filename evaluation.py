@@ -22,8 +22,8 @@ if __name__ == '__main__':
     parser.add_argument('--bs', type=int, default=256)
     parser.add_argument('--rr', type=int, default=1)
     parser.add_argument('--frames', type=int, default=50000000)
-    parser.add_argument('--evals', type=int, default=50)
-    parser.add_argument('--name', type=str, default="FullAgent")
+    parser.add_argument('--evals', type=int, default=200)
+    parser.add_argument('--name', type=str, default="FinalAgent")
 
     parser.add_argument('--maxpool_size', type=int, default=6)
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -48,7 +48,7 @@ if __name__ == '__main__':
 
     # features still in testing
 
-    parser.add_argument('--linear_size', type=int, default=1024)
+    parser.add_argument('--linear_size', type=int, default=512)
     parser.add_argument('--model_size', type=int, default=2)
     parser.add_argument('--tr', type=int, default=0)
     parser.add_argument('--ncos', type=int, default=64)
@@ -118,16 +118,16 @@ if __name__ == '__main__':
     include_evals = False
 
     # python .\evaluation.py --testing 1 --evals 40 --game NameThisGame --name FullAgent
-
-    agent_name = "BTR_" + game + frame_name + "_FullAgent" + "_linsize" + str(linear_size)
-
     name_ending = args.name
+    agent_name = "BTR_" + game + frame_name + "_" + name_ending
+
+    os.chdir(agent_name)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
     wandb_logs = False
 
-    if not testing:
+    """if not testing:
         ###################### Making Dir Code
         # Initialize a counter to keep track of the suffix
         counter = 0
@@ -149,7 +149,7 @@ if __name__ == '__main__':
 
         os.mkdir(new_dir_name)
         print(f"Created directory: {new_dir_name}")
-        os.chdir(new_dir_name)
+        os.chdir(new_dir_name)"""
 
         #############################
 
@@ -189,8 +189,7 @@ if __name__ == '__main__':
         evaluation += 1
         print("Starting Evaluation " + str(evaluation) + "M")
 
-        agent.load_models("..\\ModelDatabase\\" + name_ending + "\\" + "BTR_" + game + str(num_evals) + "M_" + \
-                          name_ending + "_" + str(evaluation) + "M.model")
+        agent.load_models(agent_name + "_" + str(evaluation) + "M.model")
 
         agent.set_eval_mode()
         evals = []
@@ -231,6 +230,6 @@ if __name__ == '__main__':
 
         print(np.mean(evals))
         evals_total.append(evals)
-        fname = "BTR_" + game + str(num_evals) + "M_" + name_ending + "_Evaluation.npy"
+        fname = "BTR_" + game + str(num_evals // 4) + "M_" + name_ending + "Evaluation.npy"
         np.save(fname, np.array(evals_total))
 
