@@ -166,6 +166,21 @@ if __name__ == '__main__':
 
     print("Eval Envs: " + str(eval_envs))
 
+    print("Start")
+
+    x = gym.make("ALE/" + game + "-v5", frameskip=1)
+
+    print("p2")
+
+    x = gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1))
+
+    print("p3")
+
+    x = [lambda: gym.wrappers.FrameStack(
+        gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(4)]
+
+    print("p4")
+
     eval_env = make_env(eval_envs)
 
     print(eval_env.observation_space)
