@@ -160,7 +160,7 @@ if __name__ == '__main__':
         eval_envs = 4
         num_eval_episodes = 5
     else:
-        eval_envs = 34
+        eval_envs = 25
         num_eval_episodes = 100
 
     print("Currently Playing Game: " + str(game))

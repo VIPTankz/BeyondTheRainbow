@@ -9,11 +9,11 @@ import wandb
 import os
 import argparse, sys
 from Agent import Agent
-from AtariPreprocessing import AtariPreprocessing
+from AtariPreprocessingCustom import AtariPreprocessingCustom
 from torch.profiler import profile, record_function, ProfilerActivity
 def make_env(envs_create):
     return gym.vector.AsyncVectorEnv([lambda: gym.wrappers.FrameStack(
-        AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(envs_create)],
+        AtariPreprocessingCustom(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(envs_create)],
                                      context="spawn")
 
 if __name__ == '__main__':
