@@ -1,1 +1,1 @@
-python evaluation.py --game BattleZone --name FinalAgent
+python evaluate_models.py --game BattleZone --name FinalAgent

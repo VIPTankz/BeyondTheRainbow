@@ -1,1 +1,1 @@
-python main.py --game DoubleDunk
+python main.py --game DoubleDunk --adamw 0

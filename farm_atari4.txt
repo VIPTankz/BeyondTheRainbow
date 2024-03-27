@@ -1,1 +1,1 @@
-python main.py --game Qbert
+python main.py --game Qbert --adamw 0

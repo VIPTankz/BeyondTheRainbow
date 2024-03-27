@@ -5,6 +5,7 @@ import gymnasium as gym
 import os
 import argparse
 from Agent import Agent
+import time
 def make_env(envs_create):
     return gym.vector.SyncVectorEnv([lambda: gym.wrappers.FrameStack(
         gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(envs_create)])
@@ -116,8 +117,6 @@ if __name__ == '__main__':
     name_ending = args.name
     agent_name = "BTR_" + game + frame_name + "_" + name_ending
 
-
-
     print("Agent Name:" + str(agent_name))
     testing = args.testing
     wandb_logs = False
@@ -165,6 +164,8 @@ if __name__ == '__main__':
     print("Device: " + str(device))
 
     print("Eval Envs: " + str(eval_envs))
+
+    time.sleep(10)
 
     print("Start")
 

@@ -1,1 +1,1 @@
-python main.py --game Phoenix
+python main.py --game Phoenix --adamw 0

@@ -120,9 +120,7 @@ if __name__ == '__main__':
 
     include_evals = False
 
-    agent_name = "BTR_" + game + frame_name + "_FinalAgent"
-    if gelu:
-        agent_name += "_gelu1"
+    agent_name = "BTR_" + game + frame_name + "_FinalAgent" + "_WD" + str(adamw)
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing

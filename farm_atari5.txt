@@ -1,1 +1,1 @@
-python main.py --gelu 1
+python main.py --game BattleZone --adamw 0
