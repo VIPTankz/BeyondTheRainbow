@@ -116,7 +116,7 @@ if __name__ == '__main__':
     name_ending = args.name
     agent_name = "BTR_" + game + frame_name + "_" + name_ending
 
-    os.chdir(agent_name)
+
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
@@ -155,7 +155,7 @@ if __name__ == '__main__':
         eval_envs = 4
         num_eval_episodes = 5
     else:
-        eval_envs = 25
+        eval_envs = 1
         num_eval_episodes = 100
 
     print("Currently Playing Game: " + str(game))
@@ -195,6 +195,8 @@ if __name__ == '__main__':
                   spectral_lin=spectral_lin, ncos=ncos)
 
     evals_total = []
+
+    os.chdir(agent_name)
 
     for evaluation in range(num_evals):
 
