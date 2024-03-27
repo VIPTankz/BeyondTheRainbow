@@ -1,14 +1,9 @@
-
 import numpy as np
 import torch
 import gymnasium as gym
 import os
 import argparse
 from Agent import Agent
-import time
-def make_env(envs_create):
-    return gym.vector.SyncVectorEnv([lambda: gym.wrappers.FrameStack(
-        gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(envs_create)])
 
 if __name__ == '__main__':
 
@@ -128,7 +123,7 @@ if __name__ == '__main__':
         eval_envs = 4
         num_eval_episodes = 5
     else:
-        eval_envs = 25
+        eval_envs = 4
         num_eval_episodes = 100
 
     print("Currently Playing Game: " + str(game))
@@ -139,20 +134,10 @@ if __name__ == '__main__':
 
     print("Eval Envs: " + str(eval_envs))
 
-    print("Start")
-
-    x = gym.make("ALE/" + game + "-v5", frameskip=1)
-
-    print("p2")
-
-    x = gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1))
-
-    print("p3")
-
-    x = [lambda: gym.wrappers.FrameStack(
-        gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in range(4)]
-
-    print("p4")
+    def make_env(envs_create):
+        return gym.vector.SyncVectorEnv([lambda: gym.wrappers.FrameStack(
+            gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in
+                                         range(envs_create)])
 
     eval_env = make_env(eval_envs)
 
