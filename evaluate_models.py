@@ -19,7 +19,7 @@ if __name__ == '__main__':
     parser.add_argument('--rr', type=int, default=1)
     parser.add_argument('--frames', type=int, default=50000000)
     parser.add_argument('--evals', type=int, default=200)
-    parser.add_argument('--name', type=str, default="FinalAgent")
+    parser.add_argument('--agent_name', type=str, default="FinalAgent")
 
     parser.add_argument('--maxpool_size', type=int, default=6)
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -114,38 +114,12 @@ if __name__ == '__main__':
     include_evals = False
 
     # python .\evaluation.py --testing 1 --evals 40 --game NameThisGame --name FullAgent
-    name_ending = args.name
+    name_ending = args.agent_name
     agent_name = "BTR_" + game + frame_name + "_" + name_ending
 
     print("Agent Name:" + str(agent_name))
     testing = args.testing
     wandb_logs = False
-
-    """if not testing:
-        ###################### Making Dir Code
-        # Initialize a counter to keep track of the suffix
-        counter = 0
-
-        # Loop until you find a directory name that doesn't exist
-        while True:
-            # Construct the directory name with the current counter
-            if counter == 0:
-                new_dir_name = agent_name
-            else:
-                new_dir_name = f"{agent_name}_{counter}"
-
-            # Check if the directory already exists
-            if not os.path.exists(new_dir_name):
-                break
-
-            # If it exists, increment the counter and try again
-            counter += 1
-
-        os.mkdir(new_dir_name)
-        print(f"Created directory: {new_dir_name}")
-        os.chdir(new_dir_name)"""
-
-        #############################
 
     # atari-3 : Battle Zone, Name This Game, Phoenix
     # atari-5 : Battle Zone, Double Dunk, Name This Game, Phoenix, Q*Bert
@@ -154,7 +128,7 @@ if __name__ == '__main__':
         eval_envs = 4
         num_eval_episodes = 5
     else:
-        eval_envs = 1
+        eval_envs = 25
         num_eval_episodes = 100
 
     print("Currently Playing Game: " + str(game))
@@ -164,8 +138,6 @@ if __name__ == '__main__':
     print("Device: " + str(device))
 
     print("Eval Envs: " + str(eval_envs))
-
-    time.sleep(10)
 
     print("Start")
 
