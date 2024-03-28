@@ -5,6 +5,11 @@ import os
 import argparse
 from Agent import Agent
 
+def make_env(envs_create):
+    return gym.vector.SyncVectorEnv([lambda: gym.wrappers.FrameStack(
+        gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in
+                                     range(envs_create)])
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
@@ -123,7 +128,7 @@ if __name__ == '__main__':
         eval_envs = 4
         num_eval_episodes = 5
     else:
-        eval_envs = 4
+        eval_envs = 25
         num_eval_episodes = 100
 
     print("Currently Playing Game: " + str(game))
@@ -134,10 +139,7 @@ if __name__ == '__main__':
 
     print("Eval Envs: " + str(eval_envs))
 
-    def make_env(envs_create):
-        return gym.vector.SyncVectorEnv([lambda: gym.wrappers.FrameStack(
-            gym.wrappers.AtariPreprocessing(gym.make("ALE/" + game + "-v5", frameskip=1)), 4) for _ in
-                                         range(envs_create)])
+
 
     eval_env = make_env(eval_envs)
 
