@@ -36,9 +36,9 @@ class EpsilonGreedy():
 class Agent:
     def __init__(self, n_actions, input_dims, device, num_envs, agent_name, total_frames, testing=False, batch_size=256
                  , rr=1, maxpool_size=6, lr=1e-4, ema=False, trust_regions=False, target_replace=500, ema_tau=0.001,
-                 noisy=False, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.997,
+                 noisy=True, spectral=True, munch=True, iqn=True, double=False, dueling=True, impala=True, discount=0.997,
                  adamw=True, ede=False, sqrt=False, discount_anneal=False, lr_decay=False, per=True, taus=8, moe=False,
-                 pruning=False, model_size=2, linear_size=1024, spectral_lin=False, ncos=64, rainbow=False, gelu=False):
+                 pruning=False, model_size=2, linear_size=512, spectral_lin=False, ncos=64, rainbow=False, gelu=False):
 
 
         if rainbow:

@@ -139,8 +139,6 @@ if __name__ == '__main__':
 
     print("Eval Envs: " + str(eval_envs))
 
-
-
     eval_env = make_env(eval_envs)
 
     print(eval_env.observation_space)
